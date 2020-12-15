@@ -1,0 +1,7 @@
+version: "3.9"
+services:
+  php8:
+    build: .docker/php
+    volumes:
+      - ~/.composer:/root/.composer
+      - ./:/app
