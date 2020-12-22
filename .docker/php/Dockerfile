@@ -1,4 +1,4 @@
-FROM php:8-fpm-alpine
+FROM php:7.4-fpm-alpine
 
 RUN apk update && \
     apk add \
@@ -6,7 +6,7 @@ RUN apk update && \
         g++ \
         make
 
-RUN pecl install xdebug-3.0.1 \
+RUN pecl install xdebug-2.9.8 \
     && docker-php-ext-enable xdebug
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer

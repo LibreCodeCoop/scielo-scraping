@@ -1,7 +1,10 @@
-version: "3.9"
+version: "3.7"
 services:
-  php8:
+  php7:
     build: .docker/php
     volumes:
       - ~/.composer:/root/.composer
       - ./:/app
+      - .docker/php/config/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    environment:
+      - XDEBUG_CONFIG="remote_host=172.17.0.1 remote_enable=1"
