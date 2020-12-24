@@ -201,6 +201,9 @@ class ScieloClient
                 case 4:
                     $return['date'] = $article->attr('data-date');
                     break;
+                case 6:
+                    $return['date'] = \DateTime::createFromFormat('Ym', $article->attr('data-date'))->format('Y-m');
+                    break;
                 default:
                     $return['date'] = \DateTime::createFromFormat('Ymd', $article->attr('data-date'))->format('Y-m-d');
             }
