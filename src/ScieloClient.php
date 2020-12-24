@@ -318,7 +318,9 @@ class ScieloClient
      */
     private function getArticleMetadata(Crawler $crawler, $article)
     {
-        $article->doi = $crawler->filter('meta[name="citation_doi"]')->attr('content');
+        if ($crawler->filter('meta[name="citation_doi"]')->count()) {
+            $article->doi = $crawler->filter('meta[name="citation_doi"]')->attr('content');
+        }
         $article->title = $crawler->filter('meta[name="citation_title"]')->attr('content');
         $article->publication_date = $crawler->filter('meta[name="citation_publication_date"]')->attr('content');
         $article->keywords = $crawler->filter('meta[name="citation_keywords"]')->each(function($meta) {
