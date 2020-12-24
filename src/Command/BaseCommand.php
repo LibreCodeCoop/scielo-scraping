@@ -58,7 +58,7 @@ class BaseCommand extends Command
         $this->volumes = $input->getOption('volume');
         $validVolumes = [];
         foreach ($this->years as $year) {
-            $validVolumes+= array_keys($grid[$year]);
+            $validVolumes = array_merge($validVolumes, array_keys($grid[$year]));
         }
         $diff = array_diff($this->volumes, $validVolumes);
         if ($diff) {
@@ -76,7 +76,7 @@ class BaseCommand extends Command
                 if (!isset($grid[$year][$volume])) {
                     continue;
                 }
-                $validIssues+= array_keys($grid[$year][$volume]);
+                $validIssues = array_merge($validIssues, array_keys($grid[$year][$volume]));
             }
         }
         $diff = array_diff($this->issues, $validIssues);
