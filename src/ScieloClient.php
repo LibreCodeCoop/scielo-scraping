@@ -2,12 +2,10 @@
 namespace ScieloScrapping;
 
 use Symfony\Component\BrowserKit\HttpBrowser;
-use Symfony\Component\BrowserKit\Response;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Finder\Exception\DirectoryNotFoundException;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Component\HttpClient\HttplugClient;
 use Symfony\Component\HttpClient\Response\AsyncContext;
 use Symfony\Component\HttpClient\Response\AsyncResponse;
 
@@ -178,12 +176,11 @@ class ScieloClient
 
             $textPdf = $this->getTextPdfUrl($article, $articleId);
 
-            return [
+            $return = [
                 'id' => $articleId,
                 'year' => $year,
                 'volume' => $volume,
                 'issueName' => $issueName,
-                'date' => \DateTime::createFromFormat('Ymd', $article->attr('data-date'))->format('Y-m-d'),
                 'title' => $title,
                 'category' => strtolower($article->filter('h2 span')->text('article')) ?: 'article',
                 'resume' => $this->getResume($article),
@@ -195,6 +192,16 @@ class ScieloClient
                     return ['name' => $a->text()];
                 })
             ];
+
+            $date = $article->attr('data-date');
+            switch (strlen($date)) {
+                case 4:
+                    $return['date'] = $article->attr('data-date');
+                    break;
+                default:
+                    $return['date'] = \DateTime::createFromFormat('Ymd', $article->attr('data-date'))->format('Y-m-d');
+            }
+            return $return;
         });
 
         foreach ($articles as $article) {
@@ -312,17 +319,29 @@ class ScieloClient
             return $meta->attr('content');
         });
         $authors = $crawler->filter('.contribGroup span[class="dropdown"]')->each(function($node) {
-            $name = $node->filter('[id*="contribGroupTutor"] span')->text();
-            $orcid = $node->filter('[class*="orcid"]')->attr('href');
-            foreach($node->filter('ul') as $nodeElement) {
-                $foundation = $nodeElement->childNodes->item(1)->data;
-                $foundation = trim(preg_replace('!\s+!', ' ', $foundation));
+            $return = [];
+            $name = $node->filter('[id*="contribGroupTutor"] span');
+            if ($name->count()) {
+                $return['name'] = $name->text();
             }
-            return [
-                'name' => $name,
-                'orcid' => $orcid,
-                'foundation' => $foundation
-            ];
+            $orcid = $node->filter('[class*="orcid"]');
+            if ($orcid->count()) {
+                $return['orcid'] = $orcid->attr('href');
+            }
+            foreach($node->filter('ul') as $nodeElement) {
+                if ($nodeElement->childNodes->count() <= 1) {
+                    continue;
+                }
+                $text = trim(preg_replace('!\s+!', ' ', $nodeElement->childNodes->item(1)->nodeValue));
+                switch($text) {
+                    case '†':
+                        $return['decreased'] = 'decreased';
+                        break;
+                    default:
+                        $return['foundation'] = $text;
+                }
+            }
+            return $return;
         });
         if ($authors) {
             $article->authors = (object)$authors;
@@ -345,18 +364,21 @@ class ScieloClient
         //         }
         //     );
 
-        new AsyncResponse(
-            HttpClient::create(),
-            'GET',
-            $this->settings['base_url'] . $url,
-            [],
-            function($chunk, AsyncContext $context) use ($fileHandler) {
-                if ($chunk->isLast()) {
-                    yield $chunk;
-                };
-                fwrite($fileHandler, $chunk->getContent());
-            }
-        );
+        try {
+            new AsyncResponse(
+                HttpClient::create(),
+                'GET',
+                $this->settings['base_url'] . $url,
+                [],
+                function($chunk, AsyncContext $context) use ($fileHandler) {
+                    if ($chunk->isLast()) {
+                        yield $chunk;
+                    };
+                    fwrite($fileHandler, $chunk->getContent());
+                }
+            );
+        } catch (\Throwable $th) {
+        }
     }
 
     private function getResume($article)
