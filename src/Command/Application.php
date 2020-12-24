@@ -38,7 +38,8 @@ class Application extends BaseApplication
     {
         $commands = array_merge(parent::getDefaultCommands(), [
             new DownloadMetadataCommand(),
-            new DownloadBinaryCommand()
+            new DownloadBinaryCommand(),
+            new DownloadAllCommand()
         ]);
 
 
