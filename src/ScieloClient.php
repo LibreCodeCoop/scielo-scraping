@@ -2,10 +2,12 @@
 namespace ScieloScrapping;
 
 use Symfony\Component\BrowserKit\HttpBrowser;
+use Symfony\Component\BrowserKit\Response;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Finder\Exception\DirectoryNotFoundException;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\HttplugClient;
 use Symfony\Component\HttpClient\Response\AsyncContext;
 use Symfony\Component\HttpClient\Response\AsyncResponse;
 
@@ -24,6 +26,8 @@ class ScieloClient
      * @var array
      */
     private $grid = [];
+    private $header;
+    private $footer;
     /**
      * Languages
      *
@@ -71,7 +75,13 @@ class ScieloClient
             $links = [];
             $td->last()->filter('.btn')->each(function($linkNode) use (&$links) {
                 $link = $linkNode->link();
-                $links[$linkNode->text()] = $link->getUri();
+                $url = $link->getUri();
+                $tokens = explode('/', $url);
+                $issueCode = $tokens[sizeof($tokens)-2];
+                $links[$issueCode] = [
+                    'text' => $linkNode->text(),
+                    'url' => $url
+                ];
             });
 
             $grid[$td->first()->text()] = [
@@ -86,11 +96,18 @@ class ScieloClient
         return $grid;
     }
 
-    public function saveAllMetadata()
+    public function saveAllMetadata($selectedYears = [], $selectedVolumes = [], $selectedIssues = [])
     {
-        foreach ($this->getGrid() as $year => $volumes) {
-            foreach ($volumes as $volume => $issues) {
-                foreach ($issues as $issueName => $issueUrl) {
+        $grid = $this->getGrid();
+        foreach ($selectedYears as $year) {
+            foreach ($selectedVolumes as $volume) {
+                if (!isset($grid[$year][$volume])) {
+                    continue;
+                }
+                foreach ($grid[$year][$volume] as $issueName => $data) {
+                    if ($selectedIssues && !in_array($issueName, $selectedIssues)) {
+                        continue;
+                    }
                     $this->getIssue($year, $volume, $issueName);
                 }
             }
@@ -151,7 +168,7 @@ class ScieloClient
             return;
         } catch (DirectoryNotFoundException $th) {
         }
-        $crawler = $this->browser->request('GET', $grid[$year][$volume][$issueName]);
+        $crawler = $this->browser->request('GET', $grid[$year][$volume][$issueName]['url']);
         $articles = $crawler->filter('.articles>li')->each(function($article) use ($year, $volume, $issueName) {
             foreach($article->filter('h2')->first() as $nodeElement) {
                 $title = trim($nodeElement->childNodes->item(0)->data);
@@ -319,6 +336,14 @@ class ScieloClient
             return;
         }
         $fileHandler = fopen($destination, 'w');
+        // $client = new HttplugClient();
+        // $request = $client->createRequest('GET', $this->settings['base_url'] . $url);
+        // $client->sendAsyncRequest($request)
+        //     ->then(
+        //         function (Response $response) use ($fileHandler) {
+        //             fwrite($fileHandler, $response->getBody());
+        //         }
+        //     );
 
         new AsyncResponse(
             HttpClient::create(),
