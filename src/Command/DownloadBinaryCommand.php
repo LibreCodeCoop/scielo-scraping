@@ -3,6 +3,7 @@
 namespace ScieloScrapping\Command;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -29,6 +30,8 @@ class DownloadBinaryCommand extends BaseCommand
             return Command::FAILURE;
         }
 
+        $progressBar = new ProgressBar($output, count($this->issues));
+        $progressBar->start();
         $grid = $this->scieloClient->getGrid();
         foreach ($this->years as $year) {
             foreach ($this->volumes as $volume) {
@@ -39,11 +42,13 @@ class DownloadBinaryCommand extends BaseCommand
                     if ($this->issues && !in_array($issueName, $this->issues)) {
                         continue;
                     }
+                    $progressBar->advance();
                     $this->scieloClient->downloadAllBinaries($year, $volume, $issueName);
                 }
             }
         }
-
+        $progressBar->finish();
+        $output->writeln('');
         return Command::SUCCESS;
     }
 }

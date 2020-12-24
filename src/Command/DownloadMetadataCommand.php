@@ -3,6 +3,7 @@
 namespace ScieloScrapping\Command;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -28,7 +29,25 @@ class DownloadMetadataCommand extends BaseCommand
         if ($this->setup($input, $output) == Command::FAILURE) {
             return Command::FAILURE;
         }
-        $this->scieloClient->saveAllMetadata($this->years, $this->volumes, $this->issues);
+        $progressBar = new ProgressBar($output, count($this->issues));
+        $progressBar->start();
+        $grid = $this->scieloClient->getGrid();
+        foreach ($this->years as $year) {
+            foreach ($this->volumes as $volume) {
+                if (!isset($grid[$year][$volume])) {
+                    continue;
+                }
+                foreach ($grid[$year][$volume] as $issueName => $data) {
+                    if ($this->issues && !in_array($issueName, $this->issues)) {
+                        continue;
+                    }
+                    $progressBar->advance();
+                    $this->scieloClient->getIssue($year, $volume, $issueName);
+                }
+            }
+        }
+        $progressBar->finish();
+        $output->writeln('');
         return Command::SUCCESS;
     }
 }
