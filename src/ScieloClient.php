@@ -154,7 +154,7 @@ class ScieloClient
         }
     }
 
-    public function getIssue($year, $volume, $issueName)
+    public function getIssue($year, $volume, $issueName, $articleId = null)
     {
         $grid = $this->getGrid();
 
@@ -162,22 +162,25 @@ class ScieloClient
             $finder = Finder::create()
                 ->files()
                 ->name('metadata.json')
-                ->in(implode(DIRECTORY_SEPARATOR, [$this->settings['base_directory'], $year, $volume, $issueName]));
+                ->in(implode(DIRECTORY_SEPARATOR, [$this->settings['base_directory'], $year, $volume, $issueName, $articleId]));
             return;
         } catch (DirectoryNotFoundException $th) {
         }
         $crawler = $this->browser->request('GET', $grid[$year][$volume][$issueName]['url']);
-        $articles = $crawler->filter('.articles>li')->each(function($article) use ($year, $volume, $issueName) {
+        $articles = [];
+        $crawler->filter('.articles>li')->each(function($article) use ($year, $volume, $issueName, $articleId, &$articles) {
+            $id = $this->getArticleId($article);
+            if ($articleId && $articleId != $id) {
+                return;
+            }
             foreach($article->filter('h2')->first() as $nodeElement) {
                 $title = trim($nodeElement->childNodes->item(0)->data);
             }
 
-            $articleId = $this->getArticleId($article);
-
-            $textPdf = $this->getTextPdfUrl($article, $articleId);
+            $textPdf = $this->getTextPdfUrl($article, $id);
 
             $return = [
-                'id' => $articleId,
+                'id' => $id,
                 'year' => $year,
                 'volume' => $volume,
                 'issueName' => $issueName,
@@ -201,7 +204,7 @@ class ScieloClient
                 default:
                     $return['date'] = \DateTime::createFromFormat('Ymd', $article->attr('data-date'))->format('Y-m-d');
             }
-            return $return;
+            $articles[] = $return;
         });
 
         foreach ($articles as $article) {

@@ -4,7 +4,9 @@ namespace ScieloScrapping\Command;
 
 use ScieloScrapping\ScieloClient;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class BaseCommand extends Command
@@ -12,10 +14,24 @@ class BaseCommand extends Command
     protected $years;
     protected $volumes;
     protected $issues;
+    protected $articleId;
     /**
      * @var ScieloClient
      */
     protected $scieloClient;
+
+    protected function configure()
+    {
+        $this
+            ->addArgument('slug', InputArgument::REQUIRED, 'Slug of journal')
+            ->addOption('year', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Year of journal')
+            ->addOption('volume', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Volume number')
+            ->addOption('issue', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Issue name')
+            ->addOption('article', null, InputOption::VALUE_OPTIONAL, 'Article name')
+            ->addOption('output', null, InputOption::VALUE_OPTIONAL, 'Output directory', 'output')
+            ->addOption('assets', null, InputOption::VALUE_OPTIONAL, 'Assets directory', 'assets');
+    }
+
     protected function setup(InputInterface $input, OutputInterface $output)
     {
         $outputDirectory = $input->getOption('output');
@@ -87,6 +103,8 @@ class BaseCommand extends Command
         if (!$this->issues) {
             $this->issues = $validIssues;
         }
+
+        $this->articleId = $input->getOption('article');
         return Command::SUCCESS;
     }
 
