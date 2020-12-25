@@ -1,6 +1,8 @@
 <?php
 namespace ScieloScrapping;
 
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Finder\Exception\DirectoryNotFoundException;
@@ -27,6 +29,12 @@ class ScieloClient
     private $header;
     private $footer;
     /**
+     * Logger
+     *
+     * @var Logger
+     */
+    private $logger;
+    /**
      * Languages
      *
      * @var array
@@ -40,12 +48,24 @@ class ScieloClient
         'journal_slug' => null,
         'base_directory' => 'output',
         'base_url' => 'https://www.scielosp.org',
-        'assets_folder' => 'assets'
+        'assets_folder' => 'assets',
+        'logger' => null,
+        'browser' => null
     ];
     public function __construct(array $settings = [])
     {
         $this->settings = array_merge($this->settings, $settings);
-        $this->browser = new HttpBrowser(HttpClient::create());
+        if (!$this->settings['browser']) {
+            $this->browser = new HttpBrowser(HttpClient::create());
+        } else {
+            $this->browser = $this->settings['browser'];
+        }
+        if (!$this->settings['logger']) {
+            $this->logger = new Logger('SCIELO');
+            $this->logger->pushHandler(new StreamHandler('logs/scielo.log', Logger::DEBUG));
+        } else {
+            $this->logger = $this->settings['logger'];
+        }
     }
 
     private function getGridUrl()
@@ -249,6 +269,10 @@ class ScieloClient
             $crawler = new Crawler(file_get_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html'));
         } else {
             $crawler = $this->browser->request('GET', $this->settings['base_url'] . $url);
+            if ($this->browser->getResponse()->getStatusCode() == 404) {
+                $this->logger->error('404', ['url' => $url, 'path' => $path, 'lang' => $lang, 'method' => 'getAllArticleData']);
+                return $article;
+            }
             file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html', $crawler->outerHtml());
         }
         if (!file_exists($path . DIRECTORY_SEPARATOR . $lang. '.html')) {
@@ -259,7 +283,9 @@ class ScieloClient
             foreach($selectors as $selector) {
                 try {
                     $html.= $crawler->filter($selector)->outerHtml();
-                } catch (\Throwable $th) {}
+                } catch (\Throwable $th) {
+                    $this->logger->error('Invalid selector', ['method' => 'getAllArcileData', 'selector' => $selector, 'article' => $article]);
+                }
             }
             $html =
                 $this->getHeader() .
@@ -320,15 +346,23 @@ class ScieloClient
     {
         if ($crawler->filter('meta[name="citation_doi"]')->count()) {
             $article->doi = $crawler->filter('meta[name="citation_doi"]')->attr('content');
+        } else {
+            $this->logger->error('Without DOI', ['method' => 'getArticleMetadata', 'article' => $article]);
         }
         if ($crawler->filter('meta[name="citation_title"]')->count()) {
             $article->title = $crawler->filter('meta[name="citation_title"]')->attr('content');
+        } else {
+            $this->logger->error('Without Title', ['method' => 'getArticleMetadata', 'article' => $article]);
         }
-        $article->publication_date = $crawler->filter('meta[name="citation_publication_date"]')->attr('content');
+        if ($crawler->filter('meta[name="citation_publication_date"]')->count()) {
+            $article->publication_date = $crawler->filter('meta[name="citation_publication_date"]')->attr('content');
+        } else {
+            $this->logger->error('Without publication_date', ['method' => 'getArticleMetadata', 'article' => $article]);
+        }
         $article->keywords = $crawler->filter('meta[name="citation_keywords"]')->each(function($meta) {
             return $meta->attr('content');
         });
-        $authors = $crawler->filter('.contribGroup span[class="dropdown"]')->each(function($node) {
+        $authors = $crawler->filter('.contribGroup span[class="dropdown"]')->each(function($node) use ($article) {
             $return = [];
             $name = $node->filter('[id*="contribGroupTutor"] span');
             if ($name->count()) {
@@ -346,6 +380,7 @@ class ScieloClient
                 switch($text) {
                     case '†':
                         $return['decreased'] = 'decreased';
+                        $this->logger->error('Author decreased', ['method' => 'getArticleMetadata', 'article' => $article]);
                         break;
                     default:
                         $return['foundation'] = $text;
@@ -388,6 +423,7 @@ class ScieloClient
                 }
             );
         } catch (\Throwable $th) {
+            $this->logger->error('Invalid request on donload binary', ['method' => 'downloadBinaryAssync', 'url' => $url]);
         }
     }
 
