@@ -140,7 +140,7 @@ class ScieloClient
         try {
             $finder = Finder::create()
                 ->files()
-                ->name('metadata.json')
+                ->name('metadata_*.json')
                 ->in(implode(DIRECTORY_SEPARATOR, [$this->settings['base_directory'], $year, $volume, $issue, $articleId]));
         } catch (\Throwable $th) {
             return;
@@ -153,7 +153,10 @@ class ScieloClient
             }
             foreach ($article->formats as $format => $data) {
                 foreach ($data as $lang => $url) {
-                    $path = dirname($file->getRealPath());
+                    $path = implode(
+                        DIRECTORY_SEPARATOR,
+                        [dirname($file->getRealPath()), $article->folder]
+                    );
                     if (!is_dir($path)) {
                         mkdir($path, 0666, true);
                     }
@@ -181,7 +184,7 @@ class ScieloClient
         try {
             $finder = Finder::create()
                 ->files()
-                ->name('metadata.json')
+                ->name('metadata_*.json')
                 ->in(implode(DIRECTORY_SEPARATOR, [$this->settings['base_directory'], $year, $volume, $issueName, $articleId]));
             return;
         } catch (DirectoryNotFoundException $th) {
@@ -238,7 +241,8 @@ class ScieloClient
             if (!is_dir($outputDir)) {
                 mkdir($outputDir, 0666, true);
             }
-            file_put_contents($outputDir . DIRECTORY_SEPARATOR . 'metadata.json', json_encode($article));
+            $article['folder'] = md5($article['title']);
+            file_put_contents($outputDir . DIRECTORY_SEPARATOR . 'metadata_'.$article['folder'].'.json', json_encode($article));
         }
         return $articles;
     }
