@@ -161,7 +161,7 @@ class ScieloClient
                         mkdir($path, 0666, true);
                     }
                     switch ($format) {
-                        case 'html':
+                        case 'text':
                             $article = $this->getAllArcileData($url, $path, $article, $lang);
                             file_put_contents($file->getRealPath(), json_encode($article));
                             break;
@@ -200,7 +200,7 @@ class ScieloClient
                 $title = trim($nodeElement->childNodes->item(0)->data);
             }
 
-            $textPdf = $this->getTextPdfUrl($article, $id);
+            $textPdf = $this->getTextPdfUrl($article);
 
             $return = [
                 'id' => $id,
@@ -210,10 +210,7 @@ class ScieloClient
                 'title' => $title,
                 'category' => strtolower($article->filter('h2 span')->text('article')) ?: 'article',
                 'resume' => $this->getResume($article),
-                'formats' => [
-                    'html' => $textPdf['text'] ?: null,
-                    'pdf' => $textPdf['pdf'] ?: null
-                ],
+                'formats' => $textPdf,
                 'authors' => $article->filter('a[href*="//search"]')->each(function($a) {
                     return ['name' => $a->text()];
                 })
@@ -451,7 +448,18 @@ class ScieloClient
 
     private function getArticleId($article)
     {
-        $id = $article->filter('ul.links li a[href^="/article/"]')->first()->attr('href');
-        return explode('/', $id)[4];
+        $link = $article->filter('ul.links li a[href^="/article/"]');
+        if ($link->count()) {
+            $id = $link->first()->attr('href');
+        } else {
+            $link = $article->filter('ul.links li a[href^="/pdf/"]');
+            if ($link->count()) {
+                $id = $link->first()->attr('href');
+            }
+        }
+        if (isset($id)) {
+            return explode('/', $id)[4];
+        }
+        $this->logger->error('Article ID not found', ['article' => $article, 'method' => 'getArticleId']);
     }
 }
