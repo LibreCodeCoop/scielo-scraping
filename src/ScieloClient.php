@@ -190,47 +190,43 @@ class ScieloClient
         } catch (DirectoryNotFoundException $th) {
         }
         $crawler = $this->browser->request('GET', $grid[$year][$volume][$issueName]['url']);
-        $articles = [];
-        $crawler->filter('.articles>li')->each(function($article) use ($year, $volume, $issueName, $articleId, &$articles) {
-            $id = $this->getArticleId($article);
+        $crawler->filter('.articles>li')->each(function(Crawler $crawler) use ($year, $volume, $issueName, $articleId) {
+            $id = $this->getArticleId($crawler);
             if ($articleId && $articleId != $id) {
                 return;
             }
-            foreach($article->filter('h2')->first() as $nodeElement) {
+            foreach($crawler->filter('h2')->first() as $nodeElement) {
                 $title = trim($nodeElement->childNodes->item(0)->data);
             }
 
-            $textPdf = $this->getTextPdfUrl($article);
+            $textPdf = $this->getTextPdfUrl($crawler);
 
-            $return = [
+            $article = [
                 'id' => $id,
                 'year' => $year,
                 'volume' => $volume,
                 'issueName' => $issueName,
                 'title' => $title,
-                'category' => strtolower($article->filter('h2 span')->text('article')) ?: 'article',
-                'resume' => $this->getResume($article),
+                'category' => strtolower($crawler->filter('h2 span')->text('article')) ?: 'article',
+                'resume' => $this->getResume($crawler),
                 'formats' => $textPdf,
-                'authors' => $article->filter('a[href*="//search"]')->each(function($a) {
+                'authors' => $crawler->filter('a[href*="//search"]')->each(function($a) {
                     return ['name' => $a->text()];
                 })
             ];
 
-            $date = $article->attr('data-date');
+            $date = $crawler->attr('data-date');
             switch (strlen($date)) {
                 case 4:
-                    $return['date'] = $article->attr('data-date');
+                    $article['date'] = $crawler->attr('data-date');
                     break;
                 case 6:
-                    $return['date'] = \DateTime::createFromFormat('Ym', $article->attr('data-date'))->format('Y-m');
+                    $article['date'] = \DateTime::createFromFormat('Ym', $crawler->attr('data-date'))->format('Y-m');
                     break;
                 default:
-                    $return['date'] = \DateTime::createFromFormat('Ymd', $article->attr('data-date'))->format('Y-m-d');
+                    $article['date'] = \DateTime::createFromFormat('Ymd', $crawler->attr('data-date'))->format('Y-m-d');
             }
-            $articles[] = $return;
-        });
 
-        foreach ($articles as $article) {
             $outputDir = implode(
                 DIRECTORY_SEPARATOR, 
                 [$this->settings['base_directory'], $year, $volume, $issueName, $article['id']]
@@ -240,8 +236,7 @@ class ScieloClient
             }
             $article['folder'] = md5($article['title']);
             file_put_contents($outputDir . DIRECTORY_SEPARATOR . 'metadata_'.$article['folder'].'.json', json_encode($article));
-        }
-        return $articles;
+        });
     }
 
     private function getTextPdfUrl($article)
