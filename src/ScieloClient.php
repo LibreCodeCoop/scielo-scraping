@@ -55,16 +55,16 @@ class ScieloClient
     public function __construct(array $settings = [])
     {
         $this->settings = array_merge($this->settings, $settings);
-        if (!$this->settings['browser']) {
-            $this->browser = new HttpBrowser(HttpClient::create());
-        } else {
+        if ($this->settings['browser']) {
             $this->browser = $this->settings['browser'];
+        } else {
+            $this->browser = new HttpBrowser(HttpClient::create());
         }
-        if (!$this->settings['logger']) {
+        if ($this->settings['logger']) {
+            $this->logger = $this->settings['logger'];
+        } else {
             $this->logger = new Logger('SCIELO');
             $this->logger->pushHandler(new StreamHandler('logs/scielo.log', Logger::DEBUG));
-        } else {
-            $this->logger = $this->settings['logger'];
         }
     }
 
@@ -151,27 +151,31 @@ class ScieloClient
             if (!$article) {
                 continue;
             }
-            foreach ($article->formats as $format => $data) {
-                foreach ($data as $lang => $url) {
-                    $path = implode(
-                        DIRECTORY_SEPARATOR,
-                        [dirname($file->getRealPath()), $article->folder]
-                    );
-                    if (!is_dir($path)) {
-                        mkdir($path, 0666, true);
-                    }
-                    switch ($format) {
-                        case 'text':
-                            $article = $this->getAllArcileData($url, $path, $article, $lang);
-                            file_put_contents($file->getRealPath(), json_encode($article));
-                            break;
-                        case 'pdf':
-                            $this->downloadBinaryAssync(
-                                $url,
-                                $path. DIRECTORY_SEPARATOR . $lang . '.pdf'
-                            );
-                            break;
-                    }
+            $this->downloadBinaries($article, dirname($file->getRealPath()));
+        }
+    }
+
+    private function downloadBinaries($article, $basedir)
+    {
+        foreach ($article->formats as $format => $data) {
+            foreach ($data as $lang => $url) {
+                $path = implode(
+                    DIRECTORY_SEPARATOR,
+                    [$basedir, $article->folder]
+                );
+                if (!is_dir($path)) {
+                    mkdir($path, 0666, true);
+                }
+                switch ($format) {
+                    case 'text':
+                        $this->getAllArcileData($url, $path, $article, $lang);
+                        break;
+                    case 'pdf':
+                        $this->downloadBinaryAssync(
+                            $url,
+                            $path. DIRECTORY_SEPARATOR . $lang . '.pdf'
+                        );
+                        break;
                 }
             }
         }
@@ -261,14 +265,22 @@ class ScieloClient
     {
         if (file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
             $crawler = new Crawler(file_get_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html'));
+            $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
         } else {
+            $callback = [$this, 'getAllArcileDataCallback'];
+
             $crawler = $this->browser->request('GET', $this->settings['base_url'] . $url);
             if ($this->browser->getResponse()->getStatusCode() == 404) {
                 $this->logger->error('404', ['url' => $url, 'path' => $path, 'lang' => $lang, 'method' => 'getAllArticleData']);
                 return $article;
             }
             file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html', $crawler->outerHtml());
+            $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
         }
+    }
+
+    private function getAllArcileDataCallback($path, $lang, $crawler, $article)
+    {
         if (!file_exists($path . DIRECTORY_SEPARATOR . $lang. '.html')) {
             $selectors = [
                 '#standalonearticle'
@@ -288,7 +300,20 @@ class ScieloClient
             file_put_contents($path . DIRECTORY_SEPARATOR . $lang. '.html', $html);
         }
         $this->getAllAssets($crawler, $path);
-        return $this->getArticleMetadata($crawler, $article);
+        $article = $this->getArticleMetadata($crawler, $article);
+
+        $metadataFilename = implode(
+            DIRECTORY_SEPARATOR,
+            [
+                $this->settings['base_directory'],
+                $article->year,
+                $article->volume,
+                $article->issueName,
+                $article->id,
+                'metadata_'.$article->folder.'.json'
+            ]
+        );
+        file_put_contents($metadataFilename, json_encode($article));
     }
 
     private function formatHtml($html)
@@ -334,7 +359,7 @@ class ScieloClient
      * Get all article metadata
      *
      * @param Crawler $article
-     * @return array
+     * @return object
      */
     private function getArticleMetadata(Crawler $crawler, $article)
     {
