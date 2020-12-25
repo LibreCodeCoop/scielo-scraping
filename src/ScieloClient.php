@@ -199,8 +199,6 @@ class ScieloClient
                 $title = trim($nodeElement->childNodes->item(0)->data);
             }
 
-            $textPdf = $this->getTextPdfUrl($crawler);
-
             $article = [
                 'id' => $id,
                 'year' => $year,
@@ -209,7 +207,7 @@ class ScieloClient
                 'title' => $title,
                 'category' => strtolower($crawler->filter('h2 span')->text('article')) ?: 'article',
                 'resume' => $this->getResume($crawler),
-                'formats' => $textPdf,
+                'formats' => $this->getTextPdfUrl($crawler),
                 'authors' => $crawler->filter('a[href*="//search"]')->each(function($a) {
                     return ['name' => $a->text()];
                 })
