@@ -28,8 +28,8 @@ class DownloadMetadataCommand extends BaseCommand
                     if ($this->issues && !in_array($issueName, $this->issues)) {
                         continue;
                     }
-                    $progressBar->advance();
                     $this->scieloClient->getIssue($year, $volume, $issueName, $this->articleId);
+                    $progressBar->advance();
                 }
             }
         }
