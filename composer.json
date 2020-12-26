@@ -4,6 +4,7 @@
     "type": "library",
     "keywords": ["webscraping", "SciELO"],
     "license": "AGPL-3.0+",
+    "minimum-stability": "dev",
     "require-dev": {
         "phpunit/phpunit": "^9.5"
     },
