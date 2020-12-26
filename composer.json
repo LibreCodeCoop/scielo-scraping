@@ -1,4 +1,9 @@
 {
+    "name": "lyseontech/scielo-scrapping",
+    "description": "SciELO webscrapping",
+    "type": "library",
+    "keywords": ["webscraping", "SciELO"],
+    "license": "AGPL-3.0+",
     "require-dev": {
         "phpunit/phpunit": "^9.5"
     },
