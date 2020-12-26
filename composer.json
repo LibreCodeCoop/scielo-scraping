@@ -1,6 +1,6 @@
 {
-    "name": "lyseontech/scielo-scrapping",
-    "description": "SciELO webscrapping",
+    "name": "lyseontech/scielo-scraping",
+    "description": "SciELO webscraping",
     "type": "library",
     "keywords": ["webscraping", "SciELO"],
     "license": "AGPL-3.0+",

@@ -1,4 +1,4 @@
-# Scielo Downloader
+# Scielo Scraping
 
 Run web scraping in a specific SciELO journal and download all publications.
 
