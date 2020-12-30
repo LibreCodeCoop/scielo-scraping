@@ -2,6 +2,14 @@
 
 Run web scraping in a specific SciELO journal and download all publications.
 
+## Install
+
+To install with composer:
+
+```sh
+composer require lyseontech/scielo-scraping
+```
+
 ## How to use?
 
 Run the follow command to see commands list:
