@@ -33,8 +33,7 @@
         "phpcs" : "phpcs --standard=PSR12 -n src",
         "phpcbf" : "phpcbf --standard=PSR12 -n src",
         "test" : [
-            "@phpcs",
-            "@phpcbf"
+            "@phpcs"
         ]
     }
 }
