@@ -37,11 +37,11 @@ class BaseCommand extends Command
         $outputDirectory = $input->getOption('output');
         if (!is_dir($outputDirectory)) {
             if (!mkdir($outputDirectory)) {
-                $output->writeln('<error>Error on create output directory called ['.$outputDirectory.']</error>');
+                $output->writeln('<error>Error on create output directory called [' . $outputDirectory . ']</error>');
                 return Command::FAILURE;
             };
         }
-        
+
         $assets = $input->getOption('assets');
         if (!is_dir($assets)) {
             $output->writeln('<error>Invalid assets directory</error>');
@@ -107,5 +107,4 @@ class BaseCommand extends Command
         $this->articleId = $input->getOption('article');
         return Command::SUCCESS;
     }
-
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace ScieloScrapping;
 
 use Monolog\Handler\StreamHandler;
@@ -18,7 +19,7 @@ class ScieloClient
      * http browser
      *
      * @var HttpBrowser
-     * 
+     *
      */
     private $browser;
     /**
@@ -82,7 +83,7 @@ class ScieloClient
     {
         return $this->settings['base_url'] . '/j/' . $this->settings['journal_slug'] . '/grid';
     }
-    
+
     public function getGrid()
     {
         if ($this->grid) {
@@ -97,15 +98,15 @@ class ScieloClient
         }
         $crawler = $this->browser->request('GET', $this->getGridUrl());
         $grid = [];
-        $crawler->filter('#issueList table tbody tr')->each(function($tr) use (&$grid) {
+        $crawler->filter('#issueList table tbody tr')->each(function ($tr) use (&$grid) {
             $td = $tr->filter('td');
 
             $links = [];
-            $td->last()->filter('.btn')->each(function($linkNode) use (&$links) {
+            $td->last()->filter('.btn')->each(function ($linkNode) use (&$links) {
                 $link = $linkNode->link();
                 $url = $link->getUri();
                 $tokens = explode('/', $url);
-                $issueCode = $tokens[sizeof($tokens)-2];
+                $issueCode = $tokens[sizeof($tokens) - 2];
                 $links[$issueCode] = [
                     'text' => $linkNode->text(),
                     'url' => $url
@@ -155,7 +156,7 @@ class ScieloClient
         } catch (\Throwable $th) {
             return;
         }
-        foreach($finder as $file) {
+        foreach ($finder as $file) {
             $article = new Article([
                 'base_directory' => $this->settings['base_directory'],
                 'logger' => $this->logger
@@ -183,7 +184,7 @@ class ScieloClient
                     case 'pdf':
                         $this->downloadBinaryAssync(
                             $url,
-                            $path. DIRECTORY_SEPARATOR . $lang . '.pdf'
+                            $path . DIRECTORY_SEPARATOR . $lang . '.pdf'
                         );
                         break;
                 }
@@ -235,7 +236,7 @@ class ScieloClient
         } else {
             $crawler['html'] = $this->browser->request('GET', $url);
             $fileLang = $this->langs[$crawler['html']->filter('html')->attr('lang')];
-            if($this->lang == $fileLang) {
+            if ($this->lang == $fileLang) {
                 file_put_contents($htmlFile, $crawler['html']->outerHtml());
             } else {
                 $this->browser->request('GET', $this->settings['base_url'] . '/set_locale/' . substr($this->lang, 0, 2));
@@ -256,7 +257,7 @@ class ScieloClient
     {
         $crawlers = $this->getIssueCrawlers($url, $year, $volume, $issueName);
         $crawlers['html']->filter('.articles>li')
-            ->each(function(Crawler $node, $index) use ($year, $volume, $issueName, $articleId, $crawlers) {
+            ->each(function (Crawler $node, $index) use ($year, $volume, $issueName, $articleId, $crawlers) {
                 $id = $this->getArticleId($node);
                 if ($articleId && $articleId != $id) {
                     return;
@@ -267,7 +268,7 @@ class ScieloClient
                 ]);
                 $doi = $crawlers['xml']->filter('entry')->eq($index)->filter('id')->text();
                 $article->load($year, $volume, $issueName, $id, $doi);
-                foreach($node->filter('h2')->first() as $nodeElement) {
+                foreach ($node->filter('h2')->first() as $nodeElement) {
                     $title = trim($nodeElement->childNodes->item(0)->data);
                 }
                 $article->setId($id);
@@ -287,14 +288,13 @@ class ScieloClient
                 $article->setUpdated((\DateTime::createFromFormat('Y-m-d\TH:i:s\Z', $updated))->format('Y-m-d H:i:s'));
 
                 $article->save();
-            }
-        );
+            });
     }
 
     private function getTextPdfUrl($node)
     {
         $return = [];
-        $node->filter('ul.links li')->each(function($li) use (&$return) {
+        $node->filter('ul.links li')->each(function ($li) use (&$return) {
             $prefix = substr($li->text(), 0, 3);
             $prefixList = [
                 'Tex' => 'text',
@@ -304,7 +304,7 @@ class ScieloClient
                 return;
             }
             $type = $prefixList[$prefix];
-            $li->filter('a')->each(function($a) use (&$return, $type) {
+            $li->filter('a')->each(function ($a) use (&$return, $type) {
                 $lang = $a->text();
                 if (isset($this->langs[$lang])) {
                     $lang = $this->langs[$lang];
@@ -333,20 +333,20 @@ class ScieloClient
 
     private function getAllArcileDataCallback($path, $lang, $crawler, $article)
     {
-        if (!file_exists($path . DIRECTORY_SEPARATOR . $lang. '.html')) {
+        if (!file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
             $selectors = [
                 '#standalonearticle'
             ];
             $html = '';
-            foreach($selectors as $selector) {
+            foreach ($selectors as $selector) {
                 try {
-                    $html.= $crawler->filter($selector)->outerHtml();
+                    $html .= $crawler->filter($selector)->outerHtml();
                 } catch (\Throwable $th) {
                     $this->logger->error('Invalid selector', ['method' => 'getAllArcileData', 'selector' => $selector, 'article' => $article]);
                 }
             }
             $html = str_replace('{{body}}', $this->formatHtml($html), $this->getTemplate());
-            file_put_contents($path . DIRECTORY_SEPARATOR . $lang. '.html', $html);
+            file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.html', $html);
         }
         $this->getAllAssets($crawler, $path);
         $article = $this->getArticleMetadata($crawler, $article, $lang);
@@ -363,7 +363,7 @@ class ScieloClient
         if ($this->template) {
             return $this->template;
         }
-        $this->template = file_get_contents($this->settings['assets_folder'] . DIRECTORY_SEPARATOR .'/template.html');
+        $this->template = file_get_contents($this->settings['assets_folder'] . DIRECTORY_SEPARATOR . '/template.html');
         return $this->template;
     }
 
@@ -372,7 +372,7 @@ class ScieloClient
         if (!is_dir($path)) {
             mkdir($path);
         }
-        $crawler->filter('.modal-body img')->each(function($img) use($path) {
+        $crawler->filter('.modal-body img')->each(function ($img) use ($path) {
             $src = $img->attr('src');
             $filename = $path . DIRECTORY_SEPARATOR . basename($src);
             if (file_exists($filename)) {
@@ -436,7 +436,7 @@ class ScieloClient
                 ]);
             }
         }
-        $authors = $crawler->filter('.contribGroup span[class="dropdown"]')->each(function($node) use ($article) {
+        $authors = $crawler->filter('.contribGroup span[class="dropdown"]')->each(function ($node) use ($article) {
             $return = [];
             $name = $node->filter('[id*="contribGroupTutor"] span');
             if ($name->count()) {
@@ -446,12 +446,12 @@ class ScieloClient
             if ($orcid->count()) {
                 $return['orcid'] = $orcid->attr('href');
             }
-            foreach($node->filter('ul') as $nodeElement) {
+            foreach ($node->filter('ul') as $nodeElement) {
                 if ($nodeElement->childNodes->count() <= 1) {
                     continue;
                 }
                 $text = trim(preg_replace('!\s+!', ' ', $nodeElement->childNodes->item(1)->nodeValue));
-                switch($text) {
+                switch ($text) {
                     case '†':
                         $return['decreased'] = 'decreased';
                         $this->logger->error('Author decreased', [
@@ -492,7 +492,7 @@ class ScieloClient
                 'GET',
                 $this->settings['base_url'] . $url,
                 [],
-                function($chunk, AsyncContext $context) use ($fileHandler) {
+                function ($chunk, AsyncContext $context) use ($fileHandler) {
                     if ($chunk->isLast()) {
                         yield $chunk;
                     };
@@ -507,9 +507,9 @@ class ScieloClient
     private function getResume($article)
     {
         $return = [];
-        $article->filter('div[data-toggle="tooltip"]')->each(function($div) use (&$return) {
+        $article->filter('div[data-toggle="tooltip"]')->each(function ($div) use (&$return) {
             $lang = $this->langs[substr($div->attr('id'), -2)];
-            foreach($div as $nodeElement){
+            foreach ($div as $nodeElement) {
                 $resume = trim($nodeElement->childNodes->item(2)->data);
                 $resume = preg_replace(
                     ['/^Resumo: /', '/^Resumen: /', '/^Abstract: /'],

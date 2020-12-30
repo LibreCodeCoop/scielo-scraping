@@ -1,4 +1,5 @@
 <?php
+
 namespace ScieloScrapping\Command;
 
 use Symfony\Component\Console\Application as BaseApplication;
@@ -21,7 +22,7 @@ class Application extends BaseApplication
 
         parent::doRun($input, $output);
     }
-    
+
     public function getHelp()
     {
         return <<<HELP
@@ -30,7 +31,7 @@ class Application extends BaseApplication
             Download all publications of a journal from SciELO.
             HELP;
     }
-    
+
     /**
      * Initializes all commands.
      */

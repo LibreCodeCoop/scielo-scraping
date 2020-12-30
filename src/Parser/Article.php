@@ -51,17 +51,17 @@ class Article
     {
         return $this->data;
     }
-    
+
     public function __call($name, $arguments)
     {
         preg_match('/(?P<action>set|get)(?P<property>.*)/', $name, $matches);
         if (!isset($matches['property']) || !isset($matches['action'])) {
-            throw new BadMethodCallException('Invalid method: '.$name);
+            throw new BadMethodCallException('Invalid method: ' . $name);
         }
         $property = $matches['property'];
-        $property = strtolower($property[0]).substr($property, 1);
+        $property = strtolower($property[0]) . substr($property, 1);
         if (!array_key_exists($property, $this->data)) {
-            throw new BadMethodCallException('No such method: '.$name);
+            throw new BadMethodCallException('No such method: ' . $name);
         }
         if (isset($arguments[1])) {
             if ($matches['action'] == 'set') {
@@ -86,7 +86,8 @@ class Article
     public function load($year, $volume, $issueName, $articleId, $doi)
     {
         if (!$doi) {
-            $this->logger->error('DOI not found',
+            $this->logger->error(
+                'DOI not found',
                 [
                     'year' => $year,
                     'volume' => $volume,
@@ -94,7 +95,8 @@ class Article
                     'articleId' => $articleId,
                     'doi' => $doi,
                     'method' => 'Article::load'
-                ]);
+                ]
+            );
             throw new \Exception('DOI not found', 1);
         }
         $this->setYear($year);
@@ -132,7 +134,7 @@ class Article
         }
         foreach ($this->originalFileArray as $property => $data) {
             if (array_key_exists($property, $this->data)) {
-                $this->{'set' . strtoupper($property[0]).substr($property, 1)}($data);
+                $this->{'set' . strtoupper($property[0]) . substr($property, 1)}($data);
             }
         }
         return $this;
