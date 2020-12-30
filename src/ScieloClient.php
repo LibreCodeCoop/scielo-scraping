@@ -291,10 +291,10 @@ class ScieloClient
         );
     }
 
-    private function getTextPdfUrl($article)
+    private function getTextPdfUrl($node)
     {
         $return = [];
-        $article->filter('ul.links li')->each(function($li) use (&$return) {
+        $node->filter('ul.links li')->each(function($li) use (&$return) {
             $prefix = substr($li->text(), 0, 3);
             $prefixList = [
                 'Tex' => 'text',
@@ -305,7 +305,11 @@ class ScieloClient
             }
             $type = $prefixList[$prefix];
             $li->filter('a')->each(function($a) use (&$return, $type) {
-                $return[$type][$this->langs[$a->text()]] = $a->attr('href');
+                $lang = $a->text();
+                if (isset($this->langs[$lang])) {
+                    $lang = $this->langs[$lang];
+                }
+                $return[$type][$lang] = $a->attr('href');
             });
         });
         return $return;
