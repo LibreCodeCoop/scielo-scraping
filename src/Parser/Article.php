@@ -5,12 +5,15 @@ namespace ScieloScrapping\Parser;
 use BadMethodCallException;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
+use Rogervila\ArrayDiffMultidimensional;
 
 class Article
 {
     private $outputDir;
     private $metadataFilename;
     private $binaryDirectory;
+    private $originalFileRaw;
+    private $originalFileArray = [];
     private $data = [
         'id' => null,
         'doi' => null,
@@ -115,19 +118,19 @@ class Article
         if (!file_exists($filename)) {
             return false;
         }
-        $article = file_get_contents($filename);
-        if (!$article) {
+        $this->originalFileRaw = file_get_contents($filename);
+        if (!$this->originalFileRaw) {
             return false;
         }
-        $article = json_decode($article, true);
-        if (!$article) {
+        $this->originalFileArray = json_decode($this->originalFileRaw, true);
+        if (!$this->originalFileArray) {
             $this->logger->error('Invalid metadata content', [
                 'filename' => $filename,
                 'method' => 'Article::loadFromFile'
             ]);
             throw new \Exception('Invalid metadata content', 1);
         }
-        foreach ($article as $property => $data) {
+        foreach ($this->originalFileArray as $property => $data) {
             if (array_key_exists($property, $this->data)) {
                 $this->{'set' . strtoupper($property[0]).substr($property, 1)}($data);
             }
@@ -137,14 +140,10 @@ class Article
 
     public function save()
     {
-        // $filtered = array_filter($this->data, fn($v) => empty($v));
-        // if (count($filtered)) {
-        //     $this->logger->error('Empty properties', [
-        //         'properties' => array_keys($filtered),
-        //         'article' => $this->data,
-        //         'method' => 'Article::save'
-        //     ]);
-        // }
+        $diff = ArrayDiffMultidimensional::compare($this->originalFileArray, $this->getAllData());
+        if (!$diff) {
+            return;
+        }
         $outputDir = $this->getBasedir();
         if (!is_dir($outputDir)) {
             mkdir($outputDir, 0666, true);
