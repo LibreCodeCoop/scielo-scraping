@@ -323,4 +323,9 @@ class Article
         }
         return $this;
     }
+
+    public function __destruct()
+    {
+        $this->save();
+    }
 }

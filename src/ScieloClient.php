@@ -181,7 +181,6 @@ class ScieloClient
                         $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
                         $this->getAllAssets($crawler, $path);
                         $article->incrementMetadata($crawler, $lang);
-                        $article->save();
                         break;
                     case 'pdf':
                         $this->downloadBinaryAssync(
@@ -289,8 +288,6 @@ class ScieloClient
                 $article->setPublished((\DateTime::createFromFormat('Y-m-d\TH:i:s\Z', $published))->format('Y-m-d H:i:s'));
                 $updated = $crawlers['xml']->filter('entry')->eq($index)->filter('updated')->text();
                 $article->setUpdated((\DateTime::createFromFormat('Y-m-d\TH:i:s\Z', $updated))->format('Y-m-d H:i:s'));
-
-                $article->save();
             });
     }
 
