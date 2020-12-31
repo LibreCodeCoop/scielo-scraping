@@ -341,22 +341,35 @@ class Article
         return $this;
     }
 
-    public function getRawCrawler(string $url, string $path, string $lang)
+    public function getRawCrawler(string $url, string $lang)
     {
-        if (file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
-            return new Crawler(file_get_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html'));
+        $rawFilename = implode(DIRECTORY_SEPARATOR, [
+            $this->getBasedir(),
+            $this->getBinaryDirectory(),
+            $lang . '.raw.html'
+        ]);
+        if (file_exists($rawFilename)) {
+            return new Crawler(file_get_contents($rawFilename));
         }
         $crawler = $this->browser->request('GET', $url);
         if ($this->browser->getResponse()->getStatusCode() == 404) {
-            $this->logger->error('404', ['url' => $url, 'path' => $path, 'lang' => $lang, 'method' => 'getAllArticleData']);
+            $this->logger->error('404', [
+                'method' => 'Article::getRawCrawler',
+                'article' => $this->getBasedir(),
+                'url' => $url
+            ]);
             return;
         }
-        file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html', $crawler->outerHtml());
+        file_put_contents($rawFilename, $crawler->outerHtml());
         return $crawler;
     }
 
-    public function getAllAssets(Crawler $crawler, $path)
+    public function getAllAssets(Crawler $crawler)
     {
+        $path = implode(DIRECTORY_SEPARATOR, [
+            $this->getBasedir(),
+            $this->getBinaryDirectory()
+        ]);
         if (!is_dir($path)) {
             mkdir($path);
         }
@@ -410,27 +423,33 @@ class Article
         }
     }
 
-    public function extractBody(string $path, string $lang, Crawler $crawler)
+    public function extractBody(Crawler $crawler, string $lang)
     {
-        if (!file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
-            $selectors = [
-                '#standalonearticle'
-            ];
-            $html = '';
-            foreach ($selectors as $selector) {
-                try {
-                    $html .= $crawler->filter($selector)->outerHtml();
-                } catch (\Throwable $th) {
-                    $this->logger->error('Invalid selector', [
-                        'method' => 'getAllArcileData',
-                        'selector' => $selector,
-                        'directory' => $this->getBasedir()
-                    ]);
-                }
-            }
-            $html = str_replace('{{body}}', $this->formatHtml($html), $this->getTemplate());
-            file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.html', $html);
+        $bodyFilename = implode(DIRECTORY_SEPARATOR, [
+            $this->getBasedir(),
+            $this->getBinaryDirectory(),
+            $lang . '.html'
+        ]);
+        if (file_exists($bodyFilename)) {
+            return;
         }
+        $selectors = [
+            '#standalonearticle'
+        ];
+        $html = '';
+        foreach ($selectors as $selector) {
+            try {
+                $html .= $crawler->filter($selector)->outerHtml();
+            } catch (\Throwable $th) {
+                $this->logger->error('Invalid selector', [
+                    'method' => 'getAllArcileData',
+                    'selector' => $selector,
+                    'directory' => $this->getBasedir()
+                ]);
+            }
+        }
+        $html = str_replace('{{body}}', $this->formatHtml($html), $this->getTemplate());
+        file_put_contents($bodyFilename, $html);
     }
 
     private function formatHtml(string $html)
@@ -457,12 +476,12 @@ class Article
                 }
                 switch ($format) {
                     case 'text':
-                        $crawler = $this->getRawCrawler($url, $path, $lang);
+                        $crawler = $this->getRawCrawler($url, $lang);
                         if (!$crawler) {
                             break;
                         }
-                        $this->extractBody($path, $lang, $crawler);
-                        $this->getAllAssets($crawler, $path);
+                        $this->extractBody($crawler, $lang);
+                        $this->getAllAssets($crawler);
                         $this->incrementMetadata($crawler, $lang);
                         break;
                     case 'pdf':
