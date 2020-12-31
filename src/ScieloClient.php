@@ -160,24 +160,22 @@ class ScieloClient
                 'logger' => $this->logger
             ]);
             $article->loadFromFile($file->getRealPath());
-            $this->downloadBinaries($article, dirname($file->getRealPath()));
+            $this->downloadBinaries($article);
         }
     }
 
-    private function downloadBinaries(Article $article, string $basedir)
+    private function downloadBinaries(Article $article)
     {
         foreach ($article->getFormats() as $format => $data) {
             foreach ($data as $lang => $url) {
-                $path = implode(
-                    DIRECTORY_SEPARATOR,
-                    [$basedir, $article->getBinaryDirectory()]
-                );
+                $path = $article->getBasedir() . DIRECTORY_SEPARATOR . $article->getBinaryDirectory();
                 if (!is_dir($path)) {
                     mkdir($path, 0666, true);
                 }
                 switch ($format) {
                     case 'text':
-                        $this->getAllArcileData($url, $path, $article, $lang);
+                        $crawler = $this->getAllArcileData($url, $path, $article, $lang);
+                        $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
                         break;
                     case 'pdf':
                         $this->downloadBinaryAssync(
