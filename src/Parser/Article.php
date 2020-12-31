@@ -447,6 +447,35 @@ class Article
         return $this->template;
     }
 
+    public function downloadBinaries()
+    {
+        foreach ($this->getFormats() as $format => $data) {
+            foreach ($data as $lang => $url) {
+                $path = $this->getBasedir() . DIRECTORY_SEPARATOR . $this->getBinaryDirectory();
+                if (!is_dir($path)) {
+                    mkdir($path, 0666, true);
+                }
+                switch ($format) {
+                    case 'text':
+                        $crawler = $this->getRawCrawler($url, $path, $lang);
+                        if (!$crawler) {
+                            break;
+                        }
+                        $this->extractBody($path, $lang, $crawler);
+                        $this->getAllAssets($crawler, $path);
+                        $this->incrementMetadata($crawler, $lang);
+                        break;
+                    case 'pdf':
+                        $this->downloadBinaryAssync(
+                            $url,
+                            $path . DIRECTORY_SEPARATOR . $lang . '.pdf'
+                        );
+                        break;
+                }
+            }
+        }
+    }
+
     public function __destruct()
     {
         $this->save();

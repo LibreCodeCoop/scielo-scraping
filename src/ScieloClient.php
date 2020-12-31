@@ -164,36 +164,7 @@ class ScieloClient
                 'browser' => $this->browser
             ]);
             $article->loadFromFile($file->getRealPath());
-            $this->downloadBinaries($article);
-        }
-    }
-
-    private function downloadBinaries(Article $article)
-    {
-        foreach ($article->getFormats() as $format => $data) {
-            foreach ($data as $lang => $url) {
-                $path = $article->getBasedir() . DIRECTORY_SEPARATOR . $article->getBinaryDirectory();
-                if (!is_dir($path)) {
-                    mkdir($path, 0666, true);
-                }
-                switch ($format) {
-                    case 'text':
-                        $crawler = $article->getRawCrawler($url, $path, $lang);
-                        if (!$crawler) {
-                            break;
-                        }
-                        $article->extractBody($path, $lang, $crawler);
-                        $article->getAllAssets($crawler, $path);
-                        $article->incrementMetadata($crawler, $lang);
-                        break;
-                    case 'pdf':
-                        $article->downloadBinaryAssync(
-                            $url,
-                            $path . DIRECTORY_SEPARATOR . $lang . '.pdf'
-                        );
-                        break;
-                }
-            }
+            $article->downloadBinaries();
         }
     }
 
