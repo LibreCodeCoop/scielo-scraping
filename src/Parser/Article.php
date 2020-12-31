@@ -9,9 +9,24 @@ use Rogervila\ArrayDiffMultidimensional;
 use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\Response\AsyncContext;
+use Symfony\Component\HttpClient\Response\AsyncResponse;
 
 class Article
 {
+    /**
+     * Logger
+     *
+     * @var Logger
+     */
+    private $logger;
+    /**
+     * http browser
+     *
+     * @var HttpBrowser
+     *
+     */
+    private $browser;
     private $outputDir;
     private $metadataFilename;
     private $binaryDirectory;
@@ -322,6 +337,75 @@ class Article
             $this->setAuthors($authors);
         }
         return $this;
+    }
+
+    public function getRawCrawler(string $url, string $path, string $lang)
+    {
+        if (file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
+            return new Crawler(file_get_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html'));
+        }
+        $crawler = $this->browser->request('GET', $url);
+        if ($this->browser->getResponse()->getStatusCode() == 404) {
+            $this->logger->error('404', ['url' => $url, 'path' => $path, 'lang' => $lang, 'method' => 'getAllArticleData']);
+            return;
+        }
+        file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html', $crawler->outerHtml());
+        return $crawler;
+    }
+
+    public function getAllAssets(Crawler $crawler, $path)
+    {
+        if (!is_dir($path)) {
+            mkdir($path);
+        }
+        $crawler->filter('.modal-body img')->each(function ($img) use ($path) {
+            $src = $img->attr('src');
+            $filename = $path . DIRECTORY_SEPARATOR . basename($src);
+            if (file_exists($filename)) {
+                return;
+            }
+            $this->downloadBinaryAssync($src, $filename);
+        });
+    }
+
+    private function getBaseUrl()
+    {
+        $protocol = $this->browser->getServerParameter('HTTPS') ? 'https' : 'http';
+        $host = $this->browser->getServerParameter('HTTP_HOST');
+        return $protocol . '://' . $host;
+    }
+
+    public function downloadBinaryAssync($url, $destination)
+    {
+        if (file_exists($destination)) {
+            return;
+        }
+        $fileHandler = fopen($destination, 'w');
+        // $client = new HttplugClient();
+        // $request = $client->createRequest('GET', $this->settings['base_url'] . $url);
+        // $client->sendAsyncRequest($request)
+        //     ->then(
+        //         function (Response $response) use ($fileHandler) {
+        //             fwrite($fileHandler, $response->getBody());
+        //         }
+        //     );
+
+        try {
+            new AsyncResponse(
+                HttpClient::create(),
+                'GET',
+                $this->getBaseUrl() . $url,
+                [],
+                function ($chunk, AsyncContext $context) use ($fileHandler) {
+                    if ($chunk->isLast()) {
+                        yield $chunk;
+                    };
+                    fwrite($fileHandler, $chunk->getContent());
+                }
+            );
+        } catch (\Throwable $th) {
+            $this->logger->error('Invalid request on donload binary', ['method' => 'downloadBinaryAssync', 'url' => $url]);
+        }
     }
 
     public function __destruct()

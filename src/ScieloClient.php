@@ -9,8 +9,6 @@ use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Component\HttpClient\Response\AsyncContext;
-use Symfony\Component\HttpClient\Response\AsyncResponse;
 
 class ScieloClient
 {
@@ -55,7 +53,8 @@ class ScieloClient
     private $settings = [
         'journal_slug' => null,
         'base_directory' => 'output',
-        'base_url' => 'https://www.scielosp.org',
+        'https' => true,
+        'http_host' => 'www.scielosp.org',
         'assets_folder' => 'assets',
         'logger' => null,
         'browser' => null,
@@ -68,6 +67,8 @@ class ScieloClient
             unset($settings['browser']);
         } else {
             $this->browser = new HttpBrowser(HttpClient::create());
+            $this->browser->setServerParameter('HTTPS', $this->settings['https']);
+            $this->browser->setServerParameter('HTTP_HOST', $this->settings['http_host']);
         }
         if (isset($settings['logger'])) {
             $this->logger = $settings['logger'];
@@ -81,7 +82,7 @@ class ScieloClient
 
     private function getGridUrl()
     {
-        return $this->settings['base_url'] . '/j/' . $this->settings['journal_slug'] . '/grid';
+        return '/j/' . $this->settings['journal_slug'] . '/grid';
     }
 
     public function getGrid()
@@ -177,13 +178,16 @@ class ScieloClient
                 }
                 switch ($format) {
                     case 'text':
-                        $crawler = $this->getAllArcileData($url, $path, $article, $lang);
+                        $crawler = $article->getRawCrawler($url, $path, $lang);
+                        if (!$crawler) {
+                            break;
+                        }
                         $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
-                        $this->getAllAssets($crawler, $path);
+                        $article->getAllAssets($crawler, $path);
                         $article->incrementMetadata($crawler, $lang);
                         break;
                     case 'pdf':
-                        $this->downloadBinaryAssync(
+                        $article->downloadBinaryAssync(
                             $url,
                             $path . DIRECTORY_SEPARATOR . $lang . '.pdf'
                         );
@@ -200,7 +204,7 @@ class ScieloClient
 
     public function setLanguage(string $lang)
     {
-        $this->browser->request('GET', $this->settings['base_url'] . '/set_locale/' . $lang);
+        $this->browser->request('GET', '/set_locale/' . $lang);
         $this->lang = $this->langs[$lang];
     }
 
@@ -240,7 +244,7 @@ class ScieloClient
             if ($this->lang == $fileLang) {
                 file_put_contents($htmlFile, $crawler['html']->outerHtml());
             } else {
-                $this->browser->request('GET', $this->settings['base_url'] . '/set_locale/' . substr($this->lang, 0, 2));
+                $this->browser->request('GET', '/set_locale/' . substr($this->lang, 0, 2));
                 return $this->getIssueCrawlers($url, $year, $volume, $issueName);
             }
         }
@@ -315,20 +319,6 @@ class ScieloClient
         return $return;
     }
 
-    private function getAllArcileData(string $url, string $path, Article $article, string $lang)
-    {
-        if (file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
-            return new Crawler(file_get_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html'));
-        }
-        $crawler = $this->browser->request('GET', $this->settings['base_url'] . $url);
-        if ($this->browser->getResponse()->getStatusCode() == 404) {
-            $this->logger->error('404', ['url' => $url, 'path' => $path, 'lang' => $lang, 'method' => 'getAllArticleData']);
-            return $article;
-        }
-        file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html', $crawler->outerHtml());
-        return $crawler;
-    }
-
     private function getAllArcileDataCallback(string $path, string $lang, Crawler $crawler, Article $article)
     {
         if (!file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
@@ -360,54 +350,6 @@ class ScieloClient
         }
         $this->template = file_get_contents($this->settings['assets_folder'] . DIRECTORY_SEPARATOR . '/template.html');
         return $this->template;
-    }
-
-    private function getAllAssets(Crawler $crawler, $path)
-    {
-        if (!is_dir($path)) {
-            mkdir($path);
-        }
-        $crawler->filter('.modal-body img')->each(function ($img) use ($path) {
-            $src = $img->attr('src');
-            $filename = $path . DIRECTORY_SEPARATOR . basename($src);
-            if (file_exists($filename)) {
-                return;
-            }
-            $this->downloadBinaryAssync($src, $filename);
-        });
-    }
-
-    private function downloadBinaryAssync($url, $destination)
-    {
-        if (file_exists($destination)) {
-            return;
-        }
-        $fileHandler = fopen($destination, 'w');
-        // $client = new HttplugClient();
-        // $request = $client->createRequest('GET', $this->settings['base_url'] . $url);
-        // $client->sendAsyncRequest($request)
-        //     ->then(
-        //         function (Response $response) use ($fileHandler) {
-        //             fwrite($fileHandler, $response->getBody());
-        //         }
-        //     );
-
-        try {
-            new AsyncResponse(
-                HttpClient::create(),
-                'GET',
-                $this->settings['base_url'] . $url,
-                [],
-                function ($chunk, AsyncContext $context) use ($fileHandler) {
-                    if ($chunk->isLast()) {
-                        yield $chunk;
-                    };
-                    fwrite($fileHandler, $chunk->getContent());
-                }
-            );
-        } catch (\Throwable $th) {
-            $this->logger->error('Invalid request on donload binary', ['method' => 'downloadBinaryAssync', 'url' => $url]);
-        }
     }
 
     private function getResume(Crawler $node)
