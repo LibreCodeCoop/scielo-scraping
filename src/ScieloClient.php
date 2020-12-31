@@ -63,18 +63,20 @@ class ScieloClient
     ];
     public function __construct(array $settings = [])
     {
-        $this->settings = array_merge($this->settings, $settings);
-        if ($this->settings['browser']) {
-            $this->browser = $this->settings['browser'];
+        if (!empty($settings['browser'])) {
+            $this->browser = $settings['browser'];
+            unset($settings['browser']);
         } else {
             $this->browser = new HttpBrowser(HttpClient::create());
         }
-        if ($this->settings['logger']) {
-            $this->logger = $this->settings['logger'];
+        if (!empty($settings['logger'])) {
+            $this->logger = $settings['logger'];
+            unset($settings['logger']);
         } else {
             $this->logger = new Logger('SCIELO');
             $this->logger->pushHandler(new StreamHandler('logs/scielo.log', Logger::DEBUG));
         }
+        $this->settings = array_merge($this->settings, $settings);
     }
 
     private function getGridUrl()
@@ -314,17 +316,15 @@ class ScieloClient
     private function getAllArcileData(string $url, string $path, Article $article, string $lang)
     {
         if (file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
-            $crawler = new Crawler(file_get_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html'));
-            $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
-        } else {
-            $crawler = $this->browser->request('GET', $this->settings['base_url'] . $url);
-            if ($this->browser->getResponse()->getStatusCode() == 404) {
-                $this->logger->error('404', ['url' => $url, 'path' => $path, 'lang' => $lang, 'method' => 'getAllArticleData']);
-                return $article;
-            }
-            file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html', $crawler->outerHtml());
-            $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
+            return new Crawler(file_get_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html'));
         }
+        $crawler = $this->browser->request('GET', $this->settings['base_url'] . $url);
+        if ($this->browser->getResponse()->getStatusCode() == 404) {
+            $this->logger->error('404', ['url' => $url, 'path' => $path, 'lang' => $lang, 'method' => 'getAllArticleData']);
+            return $article;
+        }
+        file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html', $crawler->outerHtml());
+        return $crawler;
     }
 
     private function getAllArcileDataCallback(string $path, string $lang, Crawler $crawler, Article $article)
