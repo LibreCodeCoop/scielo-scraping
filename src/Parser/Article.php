@@ -152,7 +152,7 @@ class Article
     public function save()
     {
         $diff = ArrayDiffMultidimensional::compare($this->originalFileArray, $this->getAllData());
-        if (!$diff) {
+        if ($this->originalFileArray && !$diff) {
             return;
         }
         $outputDir = $this->getBasedir();

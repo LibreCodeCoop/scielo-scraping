@@ -179,6 +179,9 @@ class ScieloClient
                     case 'text':
                         $crawler = $this->getAllArcileData($url, $path, $article, $lang);
                         $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
+                        $this->getAllAssets($crawler, $path);
+                        $article = $this->getArticleMetadata($crawler, $article, $lang);
+                        $article->save();
                         break;
                     case 'pdf':
                         $this->downloadBinaryAssync(
@@ -346,9 +349,6 @@ class ScieloClient
             $html = str_replace('{{body}}', $this->formatHtml($html), $this->getTemplate());
             file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.html', $html);
         }
-        $this->getAllAssets($crawler, $path);
-        $article = $this->getArticleMetadata($crawler, $article, $lang);
-        $article->save();
     }
 
     private function formatHtml(string $html)
