@@ -7,7 +7,6 @@ use Monolog\Logger;
 use ScieloScrapping\Parser\Article;
 use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\DomCrawler\Crawler;
-use Symfony\Component\Finder\Exception\DirectoryNotFoundException;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\Response\AsyncContext;
@@ -29,7 +28,6 @@ class ScieloClient
      */
     private $grid = [];
     private $template;
-    private $footer;
     /**
      * Logger
      *
