@@ -125,7 +125,7 @@ class ScieloClient
         return $grid;
     }
 
-    public function saveAllMetadata($selectedYears = [], $selectedVolumes = [], $selectedIssues = [])
+    public function saveAllMetadata(array $selectedYears = [], array $selectedVolumes = [], array $selectedIssues = [])
     {
         $grid = $this->getGrid();
         foreach ($selectedYears as $year) {
@@ -143,7 +143,7 @@ class ScieloClient
         }
     }
 
-    public function downloadAllBinaries($year = '*', $volume = '*', $issue = '*', $articleId = '*')
+    public function downloadAllBinaries(?string $year = '*', ?string $volume = '*', ?string $issue = '*', ?string $articleId = '*')
     {
         if (!$this->settings['base_directory'] || !is_dir($this->settings['base_directory'])) {
             return;
@@ -166,7 +166,7 @@ class ScieloClient
         }
     }
 
-    private function downloadBinaries($article, $basedir)
+    private function downloadBinaries(Article $article, string $basedir)
     {
         foreach ($article->getFormats() as $format => $data) {
             foreach ($data as $lang => $url) {
@@ -192,23 +192,23 @@ class ScieloClient
         }
     }
 
-    private function getFeedUrl($url)
+    private function getFeedUrl(string $url)
     {
         return preg_replace(['/j/', '/\/i/'], ['feed', ''], $url);
     }
 
-    public function setLanguage($lang)
+    public function setLanguage(string $lang)
     {
         $this->browser->request('GET', $this->settings['base_url'] . '/set_locale/' . $lang);
         $this->lang = $this->langs[$lang];
     }
 
-    public function getIssue($year, $volume, $issueName, $articleId = null)
+    public function getIssue(string $year, string $volume, string $issueName, $articleId = null)
     {
         $grid = $this->getGrid();
 
         $htmlUrl = $grid[$year][$volume][$issueName]['url'];
-        $this->getIssueFromHtml($htmlUrl, $grid, $year, $volume, $issueName, $articleId);
+        $this->getIssueFromHtml($htmlUrl, $year, $volume, $issueName, $articleId);
     }
 
     /**
@@ -221,7 +221,7 @@ class ScieloClient
      * @param string $filename
      * @return [Crawler,Crawler]
      */
-    private function getIssueCrawlers($url, $year, $volume, $issueName)
+    private function getIssueCrawlers(string $url, string $year, string $volume, string $issueName)
     {
         $basepath = implode(
             DIRECTORY_SEPARATOR,
@@ -253,7 +253,7 @@ class ScieloClient
         return $crawler;
     }
 
-    private function getIssueFromHtml($url, $grid, $year, $volume, $issueName, $articleId = null)
+    private function getIssueFromHtml(string $url, string $year, string $volume, string $issueName, $articleId = null)
     {
         $crawlers = $this->getIssueCrawlers($url, $year, $volume, $issueName);
         $crawlers['html']->filter('.articles>li')
@@ -291,7 +291,7 @@ class ScieloClient
             });
     }
 
-    private function getTextPdfUrl($node)
+    private function getTextPdfUrl(Crawler $node)
     {
         $return = [];
         $node->filter('ul.links li')->each(function ($li) use (&$return) {
@@ -315,7 +315,7 @@ class ScieloClient
         return $return;
     }
 
-    private function getAllArcileData($url, $path, $article, $lang)
+    private function getAllArcileData(string $url, string $path, Article $article, string $lang)
     {
         if (file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
             $crawler = new Crawler(file_get_contents($path . DIRECTORY_SEPARATOR . $lang . '.raw.html'));
@@ -331,7 +331,7 @@ class ScieloClient
         }
     }
 
-    private function getAllArcileDataCallback($path, $lang, $crawler, $article)
+    private function getAllArcileDataCallback(string $path, string $lang, Crawler $crawler, Article $article)
     {
         if (!file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
             $selectors = [
@@ -353,7 +353,7 @@ class ScieloClient
         $article->save();
     }
 
-    private function formatHtml($html)
+    private function formatHtml(string $html)
     {
         return preg_replace('/\/media\/assets\/csp\S+\/([\da-z-.]+)/i', '$1', $html);
     }
@@ -389,7 +389,7 @@ class ScieloClient
      * @param Article $article
      * @return Article
      */
-    private function getArticleMetadata(Crawler $crawler, $article, $currentLang)
+    private function getArticleMetadata(Crawler $crawler, Article $article, string $currentLang)
     {
         if (!$article->getDoi()) {
             $nodes = $crawler->filter('meta[name="citation_doi"]');
@@ -504,10 +504,10 @@ class ScieloClient
         }
     }
 
-    private function getResume($article)
+    private function getResume(Crawler $node)
     {
         $return = [];
-        $article->filter('div[data-toggle="tooltip"]')->each(function ($div) use (&$return) {
+        $node->filter('div[data-toggle="tooltip"]')->each(function ($div) use (&$return) {
             $lang = $this->langs[substr($div->attr('id'), -2)];
             foreach ($div as $nodeElement) {
                 $resume = trim($nodeElement->childNodes->item(2)->data);
@@ -522,13 +522,13 @@ class ScieloClient
         return $return;
     }
 
-    private function getArticleId($article)
+    private function getArticleId(Crawler $node)
     {
-        $link = $article->filter('ul.links li a[href^="/article/"]');
+        $link = $node->filter('ul.links li a[href^="/article/"]');
         if ($link->count()) {
             $id = $link->first()->attr('href');
         } else {
-            $link = $article->filter('ul.links li a[href^="/pdf/"]');
+            $link = $node->filter('ul.links li a[href^="/pdf/"]');
             if ($link->count()) {
                 $id = $link->first()->attr('href');
             }
@@ -536,6 +536,6 @@ class ScieloClient
         if (isset($id)) {
             return explode('/', $id)[4];
         }
-        $this->logger->error('Article ID not found', ['article' => $article, 'method' => 'getArticleId']);
+        $this->logger->error('Article ID not found', ['article' => $node, 'method' => 'getArticleId']);
     }
 }

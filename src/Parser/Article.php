@@ -34,7 +34,7 @@ class Article
         'base_directory' => 'output'
     ];
 
-    public function __construct($settings)
+    public function __construct(array $settings)
     {
         if (isset($settings['logger'])) {
             $this->logger = $settings['logger'];
@@ -52,7 +52,7 @@ class Article
         return $this->data;
     }
 
-    public function __call($name, $arguments)
+    public function __call(string $name, $arguments)
     {
         preg_match('/(?P<action>set|get)(?P<property>.*)/', $name, $matches);
         if (!isset($matches['property']) || !isset($matches['action'])) {
@@ -83,7 +83,7 @@ class Article
         return $this->data[$property];
     }
 
-    public function load($year, $volume, $issueName, $articleId, $doi)
+    public function load(string $year, string $volume, string $issueName, string $articleId, string $doi)
     {
         if (!$doi) {
             $this->logger->error(
@@ -115,7 +115,7 @@ class Article
         return $this->loadFromFile($jsonFile);
     }
 
-    public function loadFromFile($filename)
+    public function loadFromFile(string $filename)
     {
         if (!file_exists($filename)) {
             return false;
