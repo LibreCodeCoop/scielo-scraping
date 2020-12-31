@@ -1,3 +1,5 @@
+![master](https://github.com/lyseontech/scielo-scraping/workflows/CI/badge.svg?branch=master)
+
 # Scielo Scraping
 
 Run web scraping in a specific SciELO journal and download all publications.
