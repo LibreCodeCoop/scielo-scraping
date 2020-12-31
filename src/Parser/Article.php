@@ -7,6 +7,7 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Rogervila\ArrayDiffMultidimensional;
 use Symfony\Component\BrowserKit\HttpBrowser;
+use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpClient\HttpClient;
 
 class Article
@@ -233,5 +234,93 @@ class Article
             ]
         );
         return $this->outputDir;
+    }
+
+    /**
+     * Get all article metadata
+     *
+     * @param Crawler $crawler
+     * @return Article
+     */
+    public function incrementMetadata(Crawler $crawler, string $currentLang)
+    {
+        if (!$this->getDoi()) {
+            $nodes = $crawler->filter('meta[name="citation_doi"]');
+            if ($nodes->count()) {
+                $this->setDoi($nodes->attr('content'));
+            } else {
+                $this->logger->error('Without DOI', [
+                    'method' => 'ScieloClient::getArticleMetadata',
+                    'directory' => $this->getBasedir()
+                ]);
+            }
+        }
+
+        if (!$this->getTitle($currentLang)) {
+            $nodes = $crawler->filter('meta[name="citation_title"]');
+            if ($nodes->count()) {
+                $this->setTitle($nodes->attr('content'), $currentLang);
+            } else {
+                $this->logger->error('Without Title', [
+                    'method' => 'ScieloClient::getArticleMetadata',
+                    'directory' => $this->getBasedir()
+                ]);
+            }
+        }
+        if (!$this->getPublished()) {
+            $nodes = $crawler->filter('meta[name="citation_publication_date"]');
+            if ($nodes->count()) {
+                $this->setPublished($nodes->attr('content'));
+            } else {
+                $this->logger->error('Without publication_date', [
+                    'method' => 'ScieloClient::getArticleMetadata',
+                    'directory' => $this->getBasedir()
+                ]);
+            }
+        }
+        if (!$this->getKeywords($currentLang)) {
+            $nodes = $crawler->filter('meta[name="citation_keywords"]');
+            if ($nodes->count()) {
+                $this->setKeywords($nodes->each(fn($meta) => $meta->attr('content')), $currentLang);
+            } else {
+                $this->logger->error('Without keywords', [
+                    'method' => 'ScieloClient::getArticleMetadata',
+                    'directory' => $this->getBasedir()
+                ]);
+            }
+        }
+        $authors = $crawler->filter('.contribGroup span[class="dropdown"]')->each(function ($node) {
+            $return = [];
+            $name = $node->filter('[id*="contribGroupTutor"] span');
+            if ($name->count()) {
+                $return['name'] = $name->text();
+            }
+            $orcid = $node->filter('[class*="orcid"]');
+            if ($orcid->count()) {
+                $return['orcid'] = $orcid->attr('href');
+            }
+            foreach ($node->filter('ul') as $nodeElement) {
+                if ($nodeElement->childNodes->count() <= 1) {
+                    continue;
+                }
+                $text = trim(preg_replace('!\s+!', ' ', $nodeElement->childNodes->item(1)->nodeValue));
+                switch ($text) {
+                    case '†':
+                        $return['decreased'] = 'decreased';
+                        $this->logger->error('Author decreased', [
+                            'method' => 'ScieloClient::getArticleMetadata',
+                            'article' => $this->getBasedir()
+                        ]);
+                        break;
+                    default:
+                        $return['foundation'] = $text;
+                }
+            }
+            return $return;
+        });
+        if ($authors) {
+            $this->setAuthors($authors);
+        }
+        return $this;
     }
 }

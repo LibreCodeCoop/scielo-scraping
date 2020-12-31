@@ -180,7 +180,7 @@ class ScieloClient
                         $crawler = $this->getAllArcileData($url, $path, $article, $lang);
                         $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
                         $this->getAllAssets($crawler, $path);
-                        $article = $this->getArticleMetadata($crawler, $article, $lang);
+                        $article->incrementMetadata($crawler, $lang);
                         $article->save();
                         break;
                     case 'pdf':
@@ -378,95 +378,6 @@ class ScieloClient
             }
             $this->downloadBinaryAssync($src, $filename);
         });
-    }
-
-    /**
-     * Get all article metadata
-     *
-     * @param Crawler $crawler
-     * @param Article $article
-     * @return Article
-     */
-    private function getArticleMetadata(Crawler $crawler, Article $article, string $currentLang)
-    {
-        if (!$article->getDoi()) {
-            $nodes = $crawler->filter('meta[name="citation_doi"]');
-            if ($nodes->count()) {
-                $article->setDoi($nodes->attr('content'));
-            } else {
-                $this->logger->error('Without DOI', [
-                    'method' => 'ScieloClient::getArticleMetadata',
-                    'directory' => $article->getBasedir()
-                ]);
-            }
-        }
-
-        if (!$article->getTitle($currentLang)) {
-            $nodes = $crawler->filter('meta[name="citation_title"]');
-            if ($nodes->count()) {
-                $article->setTitle($nodes->attr('content'), $currentLang);
-            } else {
-                $this->logger->error('Without Title', [
-                    'method' => 'ScieloClient::getArticleMetadata',
-                    'directory' => $article->getBasedir()
-                ]);
-            }
-        }
-        if (!$article->getPublished()) {
-            $nodes = $crawler->filter('meta[name="citation_publication_date"]');
-            if ($nodes->count()) {
-                $article->setPublished($nodes->attr('content'));
-            } else {
-                $this->logger->error('Without publication_date', [
-                    'method' => 'ScieloClient::getArticleMetadata',
-                    'directory' => $article->getBasedir()
-                ]);
-            }
-        }
-        if (!$article->getKeywords($currentLang)) {
-            $nodes = $crawler->filter('meta[name="citation_keywords"]');
-            if ($nodes->count()) {
-                $article->setKeywords($nodes->each(fn($meta) => $meta->attr('content')), $currentLang);
-            } else {
-                $this->logger->error('Without keywords', [
-                    'method' => 'ScieloClient::getArticleMetadata',
-                    'directory' => $article->getBasedir()
-                ]);
-            }
-        }
-        $authors = $crawler->filter('.contribGroup span[class="dropdown"]')->each(function ($node) use ($article) {
-            $return = [];
-            $name = $node->filter('[id*="contribGroupTutor"] span');
-            if ($name->count()) {
-                $return['name'] = $name->text();
-            }
-            $orcid = $node->filter('[class*="orcid"]');
-            if ($orcid->count()) {
-                $return['orcid'] = $orcid->attr('href');
-            }
-            foreach ($node->filter('ul') as $nodeElement) {
-                if ($nodeElement->childNodes->count() <= 1) {
-                    continue;
-                }
-                $text = trim(preg_replace('!\s+!', ' ', $nodeElement->childNodes->item(1)->nodeValue));
-                switch ($text) {
-                    case '†':
-                        $return['decreased'] = 'decreased';
-                        $this->logger->error('Author decreased', [
-                            'method' => 'ScieloClient::getArticleMetadata',
-                            'article' => $article->getBasedir()
-                        ]);
-                        break;
-                    default:
-                        $return['foundation'] = $text;
-                }
-            }
-            return $return;
-        });
-        if ($authors) {
-            $article->setAuthors($authors);
-        }
-        return $article;
     }
 
     private function downloadBinaryAssync($url, $destination)
