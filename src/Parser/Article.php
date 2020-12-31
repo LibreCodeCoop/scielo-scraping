@@ -74,7 +74,7 @@ class Article
         $this->settings = array_merge($this->settings, $settings);
     }
 
-    public function getAllData(): array
+    private function getAllData(): array
     {
         return $this->data;
     }
@@ -167,7 +167,7 @@ class Article
         return $this;
     }
 
-    public function save()
+    private function save()
     {
         $diff = ArrayDiffMultidimensional::compare($this->originalFileArray, $this->getAllData());
         if ($this->originalFileArray && !$diff) {
@@ -184,7 +184,7 @@ class Article
         );
     }
 
-    public function getMetadataFilename()
+    private function getMetadataFilename()
     {
         if ($this->metadataFilename) {
             return $this->metadataFilename;
@@ -193,7 +193,7 @@ class Article
         return $this->metadataFilename;
     }
 
-    public function getBinaryDirectory()
+    private function getBinaryDirectory()
     {
         if ($this->binaryDirectory) {
             return $this->binaryDirectory;
@@ -223,7 +223,7 @@ class Article
         return $array[0];
     }
 
-    public function getBasedir()
+    private function getBasedir()
     {
         if ($this->outputDir) {
             return $this->outputDir;
@@ -259,7 +259,7 @@ class Article
      * @param Crawler $crawler
      * @return Article
      */
-    public function incrementMetadata(Crawler $crawler, string $currentLang)
+    private function incrementMetadata(Crawler $crawler, string $currentLang)
     {
         if (!$this->getDoi()) {
             $nodes = $crawler->filter('meta[name="citation_doi"]');
@@ -341,7 +341,7 @@ class Article
         return $this;
     }
 
-    public function getRawCrawler(string $url, string $lang)
+    private function getRawCrawler(string $url, string $lang)
     {
         $rawFilename = implode(DIRECTORY_SEPARATOR, [
             $this->getBasedir(),
@@ -364,7 +364,7 @@ class Article
         return $crawler;
     }
 
-    public function getAllAssets(Crawler $crawler)
+    private function getAllAssets(Crawler $crawler)
     {
         $path = implode(DIRECTORY_SEPARATOR, [
             $this->getBasedir(),
@@ -423,7 +423,7 @@ class Article
         }
     }
 
-    public function extractBody(Crawler $crawler, string $lang)
+    private function extractBody(Crawler $crawler, string $lang)
     {
         $bodyFilename = implode(DIRECTORY_SEPARATOR, [
             $this->getBasedir(),
