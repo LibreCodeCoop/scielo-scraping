@@ -1,4 +1,4 @@
-![master](https://github.com/lyseontech/scielo-scraping/workflows/ci/badge.svg?branch=master)
+![Test Status](https://github.com/lyseontech/scielo-scraping/workflows/ci/badge.svg?branch=main)
 
 # Scielo Scraping
 
