@@ -63,13 +63,13 @@ class ScieloClient
     ];
     public function __construct(array $settings = [])
     {
-        if (!empty($settings['browser'])) {
+        if (isset($settings['browser'])) {
             $this->browser = $settings['browser'];
             unset($settings['browser']);
         } else {
             $this->browser = new HttpBrowser(HttpClient::create());
         }
-        if (!empty($settings['logger'])) {
+        if (isset($settings['logger'])) {
             $this->logger = $settings['logger'];
             unset($settings['logger']);
         } else {
@@ -159,7 +159,8 @@ class ScieloClient
         foreach ($finder as $file) {
             $article = new Article([
                 'base_directory' => $this->settings['base_directory'],
-                'logger' => $this->logger
+                'logger' => $this->logger,
+                'browser' => $this->browser
             ]);
             $article->loadFromFile($file->getRealPath());
             $this->downloadBinaries($article);
@@ -262,7 +263,8 @@ class ScieloClient
                 }
                 $article = new Article([
                     'base_directory' => $this->settings['base_directory'],
-                    'logger' => $this->logger
+                    'logger' => $this->logger,
+                    'browser' => $this->browser
                 ]);
                 $doi = $crawlers['xml']->filter('entry')->eq($index)->filter('id')->text();
                 $article->load($year, $volume, $issueName, $id, $doi);

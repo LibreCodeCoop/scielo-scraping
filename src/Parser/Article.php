@@ -6,6 +6,8 @@ use BadMethodCallException;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Rogervila\ArrayDiffMultidimensional;
+use Symfony\Component\BrowserKit\HttpBrowser;
+use Symfony\Component\HttpClient\HttpClient;
 
 class Article
 {
@@ -42,6 +44,13 @@ class Article
         } else {
             $this->logger = new Logger('SCIELO');
             $this->logger->pushHandler(new StreamHandler('logs/scielo.log', Logger::DEBUG));
+        }
+
+        if (isset($settings['browser'])) {
+            $this->browser = $settings['browser'];
+            unset($settings['browser']);
+        } else {
+            $this->browser = new HttpBrowser(HttpClient::create());
         }
 
         $this->settings = array_merge($this->settings, $settings);
