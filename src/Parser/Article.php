@@ -27,6 +27,7 @@ class Article
      *
      */
     private $browser;
+    private $template;
     private $outputDir;
     private $metadataFilename;
     private $binaryDirectory;
@@ -49,7 +50,8 @@ class Article
     ];
 
     private $settings = [
-        'base_directory' => 'output'
+        'base_directory' => 'output',
+        'assets_folder' => 'assets'
     ];
 
     public function __construct(array $settings)
@@ -382,7 +384,7 @@ class Article
         }
         $fileHandler = fopen($destination, 'w');
         // $client = new HttplugClient();
-        // $request = $client->createRequest('GET', $this->settings['base_url'] . $url);
+        // $request = $client->createRequest('GET', $this->getBaseUrl() . $url);
         // $client->sendAsyncRequest($request)
         //     ->then(
         //         function (Response $response) use ($fileHandler) {
@@ -406,6 +408,43 @@ class Article
         } catch (\Throwable $th) {
             $this->logger->error('Invalid request on donload binary', ['method' => 'downloadBinaryAssync', 'url' => $url]);
         }
+    }
+
+    public function extractBody(string $path, string $lang, Crawler $crawler)
+    {
+        if (!file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
+            $selectors = [
+                '#standalonearticle'
+            ];
+            $html = '';
+            foreach ($selectors as $selector) {
+                try {
+                    $html .= $crawler->filter($selector)->outerHtml();
+                } catch (\Throwable $th) {
+                    $this->logger->error('Invalid selector', [
+                        'method' => 'getAllArcileData',
+                        'selector' => $selector,
+                        'directory' => $this->getBasedir()
+                    ]);
+                }
+            }
+            $html = str_replace('{{body}}', $this->formatHtml($html), $this->getTemplate());
+            file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.html', $html);
+        }
+    }
+
+    private function formatHtml(string $html)
+    {
+        return preg_replace('/\/media\/assets\/csp\S+\/([\da-z-.]+)/i', '$1', $html);
+    }
+
+    private function getTemplate()
+    {
+        if ($this->template) {
+            return $this->template;
+        }
+        $this->template = file_get_contents($this->settings['assets_folder'] . DIRECTORY_SEPARATOR . '/template.html');
+        return $this->template;
     }
 
     public function __destruct()

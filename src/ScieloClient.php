@@ -25,7 +25,6 @@ class ScieloClient
      * @var array
      */
     private $grid = [];
-    private $template;
     /**
      * Logger
      *
@@ -160,6 +159,7 @@ class ScieloClient
         foreach ($finder as $file) {
             $article = new Article([
                 'base_directory' => $this->settings['base_directory'],
+                'assets_folder' => $this->settings['assets_folder'],
                 'logger' => $this->logger,
                 'browser' => $this->browser
             ]);
@@ -182,7 +182,7 @@ class ScieloClient
                         if (!$crawler) {
                             break;
                         }
-                        $this->getAllArcileDataCallback($path, $lang, $crawler, $article);
+                        $article->extractBody($path, $lang, $crawler);
                         $article->getAllAssets($crawler, $path);
                         $article->incrementMetadata($crawler, $lang);
                         break;
@@ -269,6 +269,7 @@ class ScieloClient
                 }
                 $article = new Article([
                     'base_directory' => $this->settings['base_directory'],
+                    'assets_folder' => $this->settings['assets_folder'],
                     'logger' => $this->logger,
                     'browser' => $this->browser
                 ]);
@@ -317,39 +318,6 @@ class ScieloClient
             });
         });
         return $return;
-    }
-
-    private function getAllArcileDataCallback(string $path, string $lang, Crawler $crawler, Article $article)
-    {
-        if (!file_exists($path . DIRECTORY_SEPARATOR . $lang . '.html')) {
-            $selectors = [
-                '#standalonearticle'
-            ];
-            $html = '';
-            foreach ($selectors as $selector) {
-                try {
-                    $html .= $crawler->filter($selector)->outerHtml();
-                } catch (\Throwable $th) {
-                    $this->logger->error('Invalid selector', ['method' => 'getAllArcileData', 'selector' => $selector, 'article' => $article]);
-                }
-            }
-            $html = str_replace('{{body}}', $this->formatHtml($html), $this->getTemplate());
-            file_put_contents($path . DIRECTORY_SEPARATOR . $lang . '.html', $html);
-        }
-    }
-
-    private function formatHtml(string $html)
-    {
-        return preg_replace('/\/media\/assets\/csp\S+\/([\da-z-.]+)/i', '$1', $html);
-    }
-
-    private function getTemplate()
-    {
-        if ($this->template) {
-            return $this->template;
-        }
-        $this->template = file_get_contents($this->settings['assets_folder'] . DIRECTORY_SEPARATOR . '/template.html');
-        return $this->template;
     }
 
     private function getResume(Crawler $node)
