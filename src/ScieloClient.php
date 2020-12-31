@@ -246,15 +246,11 @@ class ScieloClient
                 ]);
                 $doi = $crawlers['xml']->filter('entry')->eq($index)->filter('id')->text();
                 $article->load($year, $volume, $issueName, $id, $doi);
-                foreach ($node->filter('h2')->first() as $nodeElement) {
-                    $title = trim($nodeElement->childNodes->item(0)->data);
-                }
                 $article->setId($id);
                 $article->setDoi($doi);
                 $article->setYear($year);
                 $article->setVolume($volume);
                 $article->setIssueName($issueName);
-                $article->setTitle($title, $this->lang);
                 $article->setCategory(strtolower($node->filter('h2 span')->text('article')) ?: 'article');
                 $article->setResume($this->getResume($node));
                 $article->setFormats($this->getTextPdfUrl($node));

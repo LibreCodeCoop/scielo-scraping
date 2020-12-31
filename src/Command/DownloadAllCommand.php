@@ -16,24 +16,22 @@ class DownloadAllCommand extends BaseCommand
         if ($this->setup($input, $output) == Command::FAILURE) {
             return Command::FAILURE;
         }
-        $progressBar = new ProgressBar($output, count($this->issues) * 3);
+        $progressBar = new ProgressBar($output, count($this->issues));
         $progressBar->start();
         $grid = $this->scieloClient->getGrid();
-        foreach (['pt_BR', 'en', 'es'] as $lang) {
-            $this->scieloClient->setLanguage($lang);
-            foreach ($this->years as $year) {
-                foreach ($this->volumes as $volume) {
-                    if (!isset($grid[$year][$volume])) {
+        $this->scieloClient->setLanguage('pt_BR');
+        foreach ($this->years as $year) {
+            foreach ($this->volumes as $volume) {
+                if (!isset($grid[$year][$volume])) {
+                    continue;
+                }
+                foreach ($grid[$year][$volume] as $issueName => $data) {
+                    if ($this->issues && !in_array($issueName, $this->issues)) {
                         continue;
                     }
-                    foreach ($grid[$year][$volume] as $issueName => $data) {
-                        if ($this->issues && !in_array($issueName, $this->issues)) {
-                            continue;
-                        }
-                        $this->scieloClient->getIssue($year, $volume, $issueName, $this->articleId);
-                        $this->scieloClient->downloadAllBinaries($year, $volume, $issueName, $this->articleId);
-                        $progressBar->advance();
-                    }
+                    $this->scieloClient->getIssue($year, $volume, $issueName, $this->articleId);
+                    $this->scieloClient->downloadAllBinaries($year, $volume, $issueName, $this->articleId);
+                    $progressBar->advance();
                 }
             }
         }
