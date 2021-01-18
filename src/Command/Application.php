@@ -2,6 +2,9 @@
 
 namespace ScieloScrapping\Command;
 
+use ScieloScrapping\Command\Scielo\DownloadAllCommand;
+use ScieloScrapping\Command\Scielo\DownloadBinaryCommand;
+use ScieloScrapping\Command\Scielo\DownloadMetadataCommand;
 use Symfony\Component\Console\Application as BaseApplication;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
