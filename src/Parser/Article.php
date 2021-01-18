@@ -5,7 +5,6 @@ namespace ScieloScrapping\Parser;
 use BadMethodCallException;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
-use Rogervila\ArrayDiffMultidimensional;
 use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpClient\HttpClient;
@@ -32,7 +31,6 @@ class Article
     private $metadataFilename;
     private $binaryDirectory;
     private $originalFileRaw;
-    private $originalFileArray = [];
     private $data = [
         'id' => null,
         'doi' => null,
@@ -151,15 +149,15 @@ class Article
         if (!$this->originalFileRaw) {
             return false;
         }
-        $this->originalFileArray = json_decode($this->originalFileRaw, true);
-        if (!$this->originalFileArray) {
+        $originalFileArray = json_decode($this->originalFileRaw, true);
+        if (!$originalFileArray) {
             $this->logger->error('Invalid metadata content', [
                 'filename' => $filename,
                 'method' => 'Article::loadFromFile'
             ]);
             throw new \Exception('Invalid metadata content', 1);
         }
-        foreach ($this->originalFileArray as $property => $data) {
+        foreach ($originalFileArray as $property => $data) {
             if (array_key_exists($property, $this->data)) {
                 $this->{'set' . strtoupper($property[0]) . substr($property, 1)}($data);
             }
@@ -169,8 +167,8 @@ class Article
 
     private function save()
     {
-        $diff = ArrayDiffMultidimensional::compare($this->originalFileArray, $this->getAllData());
-        if ($this->originalFileArray && !$diff) {
+        $output = json_encode($this->data);
+        if ($this->originalFileRaw == $output) {
             return;
         }
         $outputDir = $this->getBasedir();
@@ -180,7 +178,7 @@ class Article
         $filename = $this->getMetadataFilename();
         file_put_contents(
             $outputDir . DIRECTORY_SEPARATOR . $filename,
-            json_encode($this->data)
+            $output
         );
     }
 

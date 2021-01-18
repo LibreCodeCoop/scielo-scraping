@@ -19,7 +19,6 @@ class DownloadAllCommand extends BaseCommand
         $progressBar = new ProgressBar($output, count($this->issues));
         $progressBar->start();
         $grid = $this->scieloClient->getGrid();
-        $this->scieloClient->setLanguage('pt_BR');
         foreach ($this->years as $year) {
             foreach ($this->volumes as $volume) {
                 if (!isset($grid[$year][$volume])) {

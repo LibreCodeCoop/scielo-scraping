@@ -176,7 +176,7 @@ class ScieloClient
     public function setLanguage(string $lang)
     {
         $this->browser->request('GET', '/set_locale/' . $lang);
-        $this->lang = $this->langs[$lang];
+        $this->settings['default_language'] = $this->langs[$lang];
     }
 
     public function getIssue(string $year, string $volume, string $issueName, $articleId = null)
@@ -206,16 +206,16 @@ class ScieloClient
         if (!is_dir($basepath)) {
             mkdir($basepath, 0666, true);
         }
-        $htmlFile = $basepath . DIRECTORY_SEPARATOR . $this->lang . '.html';
+        $htmlFile = $basepath . DIRECTORY_SEPARATOR . $this->settings['default_language'] . '.html';
         if (file_exists($htmlFile)) {
             $crawler['html'] = new Crawler(file_get_contents($htmlFile));
         } else {
             $crawler['html'] = $this->browser->request('GET', $url);
             $fileLang = $this->langs[$crawler['html']->filter('html')->attr('lang')];
-            if ($this->lang == $fileLang) {
+            if ($this->settings['default_language'] == $fileLang) {
                 file_put_contents($htmlFile, $crawler['html']->outerHtml());
             } else {
-                $this->browser->request('GET', '/set_locale/' . substr($this->lang, 0, 2));
+                $this->browser->request('GET', '/set_locale/' . substr($this->settings['default_language'], 0, 2));
                 return $this->getIssueCrawlers($url, $year, $volume, $issueName);
             }
         }
