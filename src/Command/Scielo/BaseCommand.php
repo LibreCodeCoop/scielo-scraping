@@ -1,6 +1,6 @@
 <?php
 
-namespace ScieloScrapping\Command;
+namespace ScieloScrapping\Command\Scielo;
 
 use ScieloScrapping\ScieloClient;
 use Symfony\Component\Console\Command\Command;
