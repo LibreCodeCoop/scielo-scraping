@@ -2,6 +2,8 @@
 
 namespace ScieloScrapping\Command;
 
+use ScieloScrapping\Command\Ojs\ImportCommand;
+use ScieloScrapping\Command\Ojs\SetupOjsCommand;
 use ScieloScrapping\Command\Scielo\DownloadAllCommand;
 use ScieloScrapping\Command\Scielo\DownloadBinaryCommand;
 use ScieloScrapping\Command\Scielo\DownloadMetadataCommand;
@@ -43,7 +45,9 @@ class Application extends BaseApplication
         $commands = array_merge(parent::getDefaultCommands(), [
             new DownloadMetadataCommand(),
             new DownloadBinaryCommand(),
-            new DownloadAllCommand()
+            new DownloadAllCommand(),
+            new ImportCommand(),
+            new SetupOjsCommand()
         ]);
 
 

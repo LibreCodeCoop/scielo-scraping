@@ -7,4 +7,15 @@ services:
       - ./:/app
       - .docker/php/config/php.ini:/usr/local/etc/php/conf.d/custom.ini
     environment:
-      - XDEBUG_CONFIG="remote_host=172.17.0.1 remote_enable=1"
+      - XDEBUG_CONFIG
+  mariadb:
+    image: mariadb:latest
+    ports:
+      - "3306:3306"
+    volumes:
+      - .docker/mariadb/config:/etc/mysql/conf.d
+      - ./volumes/mysql/dump:/docker-entrypoint-initdb.d
+      - ./volumes/mysql/data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD
+      - TZ
