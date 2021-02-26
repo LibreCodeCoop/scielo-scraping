@@ -45,11 +45,11 @@ class ImportCommand extends Command
         $this->loadOjsBasedir();
         OjsProvider::getApplication();
         $this->saveIssues();
-        $this->saveArticles();
+        $this->saveSubmission();
         return Command::SUCCESS;
     }
 
-    private function saveArticles()
+    private function saveSubmission()
     {
         /**
          * @var SubmissionDAO
