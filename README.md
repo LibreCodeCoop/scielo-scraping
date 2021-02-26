@@ -50,11 +50,3 @@ All commands:
   scielo:download-binary    
   scielo:download-metadata  
 ```
-
-## OJS
-
-If you need use OJS integration, create this environments:
-
-| Environment     | Suggested value | Usage        |
-| --------------- | --------------- | ------------ |
-| OJS_WEB_BASEDIR | /app/ojs        | For make all |
