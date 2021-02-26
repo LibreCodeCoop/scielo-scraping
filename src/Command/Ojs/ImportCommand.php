@@ -44,44 +44,8 @@ class ImportCommand extends Command
 
         $this->loadOjsBasedir();
         OjsProvider::getApplication();
-        $journal = $this->getJournal();
+        $this->saveIssues();
 
-        $langs = $journal->getSupportedLocales();
-        /**
-         * @var IssueDAO
-         */
-        $issueDAO = DAORegistry::getDAO('IssueDAO');
-        $grid = $this->getGrid();
-        foreach ($grid as $year => $volumes) {
-            foreach ($volumes as $volume => $issues) {
-                foreach ($issues as $issueName => $attr) {
-                    if (isset($attr['issueId'])) {
-                        continue;
-                    }
-                    $issues = $issueDAO->getIssuesByIdentification($journal->getId(), $volume, $attr['text'], $year);
-                    if ($issues->getCount()) {
-                        continue;
-                    }
-                    // Insert issue
-                    $issue = $issueDAO->newDataObject();
-                    $issue->setJournalId($journal->getId());
-                    $issue->setVolume($volume);
-                    $issue->setShowVolume(1);
-                    $issue->setNumber($attr['text']);
-                    $issue->setShowNumber(1);
-                    $issue->setYear($year);
-                    $issue->setShowYear(1);
-                    foreach($langs as $lang) {
-                        $issue->setTitle($attr['text'], $lang);
-                    }
-                    $issue->setShowTitle(1);
-                    $issue->setPublished(1);
-                    $issueId = $issueDAO->insertObject($issue);
-                    $this->setGridAttribute($year, $volume, $issueName, 'issueId', $issueId);
-                }
-            }
-        }
-        
         /**
          * @var SubmissionDAO
          */
@@ -96,7 +60,7 @@ class ImportCommand extends Command
             ->name('metadata_*.json')
             ->in($this->getOutputDirectory());
         if (!$finder->count()) {
-            $output->write('Metadata json files not found.');
+            throw new RuntimeException('Metadata json files not found.');
         }
         foreach ($finder as $file) {
             $article = file_get_contents($file->getRealPath());
@@ -147,6 +111,46 @@ class ImportCommand extends Command
             }
         }
         return Command::SUCCESS;
+    }
+
+    private function saveIssues()
+    {
+        $journal = $this->getJournal();
+        $langs = $journal->getSupportedLocales();
+        /**
+         * @var IssueDAO
+         */
+        $issueDAO = DAORegistry::getDAO('IssueDAO');
+        $grid = $this->getGrid();
+        foreach ($grid as $year => $volumes) {
+            foreach ($volumes as $volume => $issues) {
+                foreach ($issues as $issueName => $attr) {
+                    if (isset($attr['issueId'])) {
+                        continue;
+                    }
+                    $issues = $issueDAO->getIssuesByIdentification($journal->getId(), $volume, $attr['text'], $year);
+                    if ($issues->getCount()) {
+                        continue;
+                    }
+                    // Insert issue
+                    $issue = $issueDAO->newDataObject();
+                    $issue->setJournalId($journal->getId());
+                    $issue->setVolume($volume);
+                    $issue->setShowVolume(1);
+                    $issue->setNumber($attr['text']);
+                    $issue->setShowNumber(1);
+                    $issue->setYear($year);
+                    $issue->setShowYear(1);
+                    foreach($langs as $lang) {
+                        $issue->setTitle($attr['text'], $lang);
+                    }
+                    $issue->setShowTitle(1);
+                    $issue->setPublished(1);
+                    $issueId = $issueDAO->insertObject($issue);
+                    $this->setGridAttribute($year, $volume, $issueName, 'issueId', $issueId);
+                }
+            }
+        }
     }
 
     private function setGridAttribute($year, $volume, $issueName, $attribute, $value)
