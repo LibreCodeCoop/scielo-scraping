@@ -87,10 +87,14 @@ class ImportCommand extends Command
 
             if (!$article['ojs']['publicationId']) {
                 $update = true;
+
+                list($year, $volume, $issueName) = explode('/', $file->getRelativePath());
+                $issue = $this->getIssue($year, $volume, $issueName);
+
                 $publication = $PublicationDAO->newDataObject();
                 $publication->setData('submissionId', $article['ojs']['submissionId']);
                 $publication->setData('status', 1); // published
-                $publication->setData('issueId', $issueId);
+                $publication->setData('issueId', $issue['issueId']);
                 $publication->setData('locale', $this->identifyPrimaryLanguage($article));
                 $publication->setData('pub-id::doi', $article['doi']);
                 foreach ($article['title'] as $lang => $title) {
@@ -111,6 +115,11 @@ class ImportCommand extends Command
             }
         }
         return Command::SUCCESS;
+    }
+
+    private function getIssue($year, $volume, $issueName)
+    {
+        $this->getGrid()[$year][$volume][$issueName];
     }
 
     private function saveIssues()
