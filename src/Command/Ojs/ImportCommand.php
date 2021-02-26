@@ -45,7 +45,12 @@ class ImportCommand extends Command
         $this->loadOjsBasedir();
         OjsProvider::getApplication();
         $this->saveIssues();
+        $this->saveArticles();
+        return Command::SUCCESS;
+    }
 
+    private function saveArticles()
+    {
         /**
          * @var SubmissionDAO
          */
@@ -114,7 +119,6 @@ class ImportCommand extends Command
                 file_put_contents($file->getRealPath(), json_encode($article));
             }
         }
-        return Command::SUCCESS;
     }
 
     private function getIssue($year, $volume, $issueName)
