@@ -9,12 +9,24 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use DAORegistry;
 use JournalDAO;
+use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Finder\Finder;
 
 class ImportCommand extends Command
 {
+    /** @var string */
     protected static $defaultName = 'ojs:import';
+    /** @var InputInterface */
+    private $input;
+    /** @var OutputInterface */
+    private $output;
+    /** @var string */
+    private $outputDirectory;
+    /** @var \stdClass */
+    private $grid;
+    /** @var bool */
+    private $doUpgradeGrid = false;
 
     protected function configure()
     {
@@ -27,67 +39,19 @@ class ImportCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $outputDirectory = $input->getOption('output');
-        if (!is_dir($outputDirectory)) {
-            $output->writeln('<error>Error on create output directory called [' . $outputDirectory . ']</error>');
-            $output->writeln('Run frist scielo download command or fix directory path');
-            return Command::FAILURE;
-        }
+        $this->input = $input;
+        $this->output = $output;
 
-        $ojsBasedir = $input->getOption('ojs-basedir');
-        if (!is_dir($ojsBasedir)) {
-            $ojsBasedir = getenv('OJS_WEB_BASEDIR');
-            if (!$ojsBasedir) {
-                $output->writeln('<error>Inform a valid path in ojs-basedir option</error>');
-                return Command::FAILURE;
-            }
-        }
-        putenv('OJS_WEB_BASEDIR=' . $ojsBasedir);
-
+        $this->loadOjsBasedir();
         OjsProvider::getApplication();
-        /**
-         * @var JournalDAO
-         */
-        $JournalDAO = DAORegistry::getDAO('JournalDAO');
-        $journals = $JournalDAO->getAll();
-        if (!$journals) {
-            $output->writeln('<error>Create a journal in OJS first</error>');
-            return Command::FAILURE;
-        }
-        while ($journal = $journals->next()) {
-            $options[$journal->getPath()] = $journal;
-        }
-        $total = count($options);
-        if ($total > 1) {
-            $helper = $this->getHelper('question');
-            $question = new ChoiceQuestion(
-                'Select the destination journal',
-                array_keys($options)
-            );
-            $question->setErrorMessage('Journal path %s is invalid.');
-            $journalPath = $helper->ask($input, $output, $question);
-            $journal = $journals[array_keys($journals)[$journalPath]];
-        } else {
-            $journal = current($options);
-        }
-
-        if (!is_file($outputDirectory . '/grid.json')) {
-            $output->writeln('<error>grid.json not found</error>');
-            return Command::FAILURE;
-        }
-        $grid = file_get_contents($outputDirectory . '/grid.json');
-        $grid = json_decode($grid, true);
-        if (!$grid) {
-            $output->writeln('<error>Invalid content in grid.json</error>');
-            return Command::FAILURE;
-        }
+        $journal = $this->getJournal();
 
         $langs = $journal->getSupportedLocales();
         /**
          * @var IssueDAO
          */
         $issueDAO = DAORegistry::getDAO('IssueDAO');
-        $update = false;
+        $grid = $this->getGrid();
         foreach ($grid as $year => $volumes) {
             foreach ($volumes as $volume => $issues) {
                 foreach ($issues as $issueName => $attr) {
@@ -113,13 +77,9 @@ class ImportCommand extends Command
                     $issue->setShowTitle(1);
                     $issue->setPublished(1);
                     $issueId = $issueDAO->insertObject($issue);
-                    $grid[$year][$volume][$issueName]['issueId'] = $issueId;
-                    $update = true;
+                    $this->setGridAttribute($year, $volume, $issueName, 'issueId', $issueId);
                 }
             }
-        }
-        if ($update) {
-            file_put_contents($outputDirectory . '/grid.json', json_encode($grid));
         }
         
         /**
@@ -134,7 +94,7 @@ class ImportCommand extends Command
         $finder = Finder::create()
             ->files()
             ->name('metadata_*.json')
-            ->in($outputDirectory);
+            ->in($this->getOutputDirectory());
         if (!$finder->count()) {
             $output->write('Metadata json files not found.');
         }
@@ -189,6 +149,78 @@ class ImportCommand extends Command
         return Command::SUCCESS;
     }
 
+    private function setGridAttribute($year, $volume, $issueName, $attribute, $value)
+    {
+        $this->doUpgradeGrid = true;
+        $this->grid[$year][$volume][$issueName][$attribute] = $value;
+    }
+
+    private function loadOjsBasedir()
+    {
+        $ojsBasedir = $this->input->getOption('ojs-basedir');
+        if (!is_dir($ojsBasedir)) {
+            $ojsBasedir = getenv('OJS_WEB_BASEDIR');
+            if (!$ojsBasedir) {
+                throw new RuntimeException('Inform a valid path in ojs-basedir option');
+            }
+        }
+        putenv('OJS_WEB_BASEDIR=' . $ojsBasedir);
+    }
+
+    private function getOutputDirectory()
+    {
+        if (!$this->outputDirectory) {
+            $this->outputDirectory = $this->input->getOption('output');
+            if (!is_dir($this->outputDirectory)) {
+                $this->output->writeln('Run frist scielo download command or fix directory path');
+                throw new RuntimeException('Error on create output directory called [' . $this->outputDirectory . ']');
+            }
+        }
+        return $this->outputDirectory;
+    }
+
+    private function getGrid()
+    {
+        if (!$this->grid) {
+            $outputDirectory = $this->getOutputDirectory();
+            if (!is_file($outputDirectory . '/grid.json')) {
+                throw new RuntimeException('grid.json not found');
+            }
+            $this->grid = file_get_contents($outputDirectory . '/grid.json');
+            $this->grid = json_decode($this->grid, true);
+            if (!$this->grid) {
+                throw new RuntimeException('Invalid content in grid.json</error>');
+            }
+        }
+        return $this->grid;
+    }
+
+    private function getJournal()
+    {
+        /**
+         * @var JournalDAO
+         */
+        $JournalDAO = DAORegistry::getDAO('JournalDAO');
+        $journals = $JournalDAO->getAll();
+        if (!$journals) {
+            throw new RuntimeException('Create a journal in OJS first',);
+        }
+        while ($journal = $journals->next()) {
+            $options[$journal->getPath()] = $journal;
+        }
+        if (count($options) > 1) {
+            $helper = $this->getHelper('question');
+            $question = new ChoiceQuestion(
+                'Select the destination journal',
+                array_keys($options)
+            );
+            $question->setErrorMessage('Journal path %s is invalid.');
+            $journalPath = $helper->ask($this->input, $this->output, $question);
+            return $journals[array_keys($options)[$journalPath]];
+        }
+        return current($options);
+    }
+
     private function identifyPrimaryLanguage($article)
     {
         if (isset($article['formats']['text'])) {
@@ -210,6 +242,13 @@ class ImportCommand extends Command
             if (count($article['keywords']) == 1) {
                 return array_key_first($article['keywords']);
             }
+        }
+    }
+
+    private function __destruct()
+    {
+        if ($this->doUpgradeGrid) {
+            file_put_contents($this->getOutputDirectory() . '/grid.json', json_encode($this->getGrid()));
         }
     }
 }
