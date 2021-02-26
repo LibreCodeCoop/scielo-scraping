@@ -2,3 +2,6 @@
 /output
 /static
 /logs
+/ojs
+/volumes
+.env

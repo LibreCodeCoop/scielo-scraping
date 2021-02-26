@@ -42,7 +42,19 @@ Options:
 All commands:
 
 ```
-scielo:download-all
-scielo:download-binary
-scielo:download-metadata
+ ojs
+  ojs:import-issue          
+  ojs:setup-ojs             Setup OJS, only use if you don't have OJS installed.
+ scielo
+  scielo:download-all       
+  scielo:download-binary    
+  scielo:download-metadata  
 ```
+
+## OJS
+
+If you need use OJS integration, create this environments:
+
+| Environment     | Suggested value | Usage        |
+| --------------- | --------------- | ------------ |
+| OJS_WEB_BASEDIR | /app/ojs        | For make all |
