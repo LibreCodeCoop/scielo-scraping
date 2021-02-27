@@ -2,6 +2,7 @@
 
 namespace ScieloScrapping\Command\Ojs;
 
+use Category;
 use OjsSdk\Providers\Ojs\OjsProvider;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -9,6 +10,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use DAORegistry;
 use JournalDAO;
+use Publication;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Question\ChoiceQuestion;
@@ -34,6 +36,8 @@ class ImportCommand extends Command
     private $totalMetadata = 0;
     /** @var ProgressBar */
     private $progressBar;
+    /** @var Category[] */
+    private $category = [];
 
     protected function configure()
     {
@@ -172,6 +176,8 @@ class ImportCommand extends Command
                 // categoryIds
                 $article['ojs']['publicationId'] = $PublicationDAO->insertObject($publication);
 
+                $this->assignPublicationToCategory($publication, $article);
+
                 if (!$submission) {
                     $submission = $SubmissionDAO->getById($article['ojs']['submissionId']);
                 }
@@ -183,6 +189,33 @@ class ImportCommand extends Command
             }
             $this->progressBar->advance();
         }
+    }
+
+    private function assignPublicationToCategory(Publication $publication, array $article)
+    {
+        $categoryDao = DAORegistry::getDAO('CategoryDAO'); /* @var $categoryDao CategoryDAO */
+        $category = $this->getCategory($article['category']);
+        $categoryDao->insertPublicationAssignment($category->getId(), $publication->getId());
+    }
+
+    private function getCategory($name)
+    {
+        if (!isset($this->category[$name])) {
+            $journal = $this->getJournal();
+            $categoryDao = DAORegistry::getDAO('CategoryDAO'); /* @var $categoryDao CategoryDAO */
+            $this->category[$name] = $categoryDao->getByTitle($name, $journal->getId());
+            if (!$this->category[$name]) {
+                $langs = $journal->getSupportedLocales();
+                $category = $categoryDao->newDataObject();
+                $category->setContextId($journal->getId());
+                $category->setPath($name);
+                foreach ($langs as $lang) {
+                    $category->setTitle($name, $lang);
+                }
+                $categoryDao->insertObject($category);
+            }
+        }
+        return $this->category[$name];
     }
 
     private function getIssue($year, $volume, $issueName)
