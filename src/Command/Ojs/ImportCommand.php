@@ -52,14 +52,34 @@ class ImportCommand extends Command
         $this->loadOjsBasedir();
         OjsProvider::getApplication();
 
-        $this->output->write('Calculating total itens to import...');
-        $total = $this->countIssues() + $this->countMetadata();
-        $this->progressBar = new ProgressBar($this->output, $total);
-        $this->output->write("\r");
+        $this->output->writeln('');
+        $this->output->writeln('');
+        $this->progressBar = new ProgressBar($this->output);
         $this->progressBar->start();
+        $this->progressBar->setMessage('Calculating total itens to import...', 'status');
+        $this->progressBar->setFormat(
+            "<fg=white;bg=cyan> %status:-45s%</>\n".
+            "\n".
+            "%memory:44s%"
+        );
+        $this->progressBar->display();
+        $this->progressBar->setBarCharacter('<fg=green>⚬</>');
+        $this->progressBar->setEmptyBarCharacter("<fg=red>⚬</>");
+        $this->progressBar->setProgressCharacter("<fg=green>➤</>");
+        $this->progressBar->setFormat(
+            "<fg=white;bg=cyan> %status:-45s%</>\n".
+            "%current%/%max% [%bar%] %percent:3s%%\n".
+            "  %estimated:-20s%  %memory:20s%"
+        );
+        $total = $this->countIssues() + $this->countMetadata();
+        $this->progressBar->setMaxSteps($total);
+
         $this->saveIssues();
         $this->saveSubmission();
+
+        $this->progressBar->setMessage('Done! :-D', 'status');
         $this->progressBar->finish();
+
         $output->writeln('');
         return Command::SUCCESS;
     }
@@ -92,6 +112,7 @@ class ImportCommand extends Command
         if (!$total) {
             throw new RuntimeException('Metadata json files not found.');
         }
+        $this->progressBar->setMessage('Importing submission...', 'status');
         /**
          * @var SubmissionDAO
          */
@@ -178,6 +199,7 @@ class ImportCommand extends Command
             throw new RuntimeException('No issues to import.');
         }
 
+        $this->progressBar->setMessage('Importing issues...', 'status');
         $grid = $this->getGrid();
         foreach ($grid as $year => $volumes) {
             foreach ($volumes as $volume => $issues) {
