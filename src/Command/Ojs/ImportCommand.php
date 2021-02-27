@@ -141,17 +141,7 @@ class ImportCommand extends Command
             $update = false;
             if (!$article['ojs']['submissionId']) {
                 $update = true;
-                /**
-                 * @var Submission
-                 */
-                $submission = $SubmissionDAO->newDataObject();
-                $submission->setData('contextId', 1); // Journal = CSP
-                $submission->setData('status', STATUS_PUBLISHED);
-                $submission->setData('stage_id', WORKFLOW_STAGE_ID_PRODUCTION);
-                $submission->setData('dateLastActivity', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
-                $submission->setData('dateSubmitted', str_pad($article['published'], 10, '-01', STR_PAD_RIGHT));
-                $submission->setData('lastModified', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
-                $article['ojs']['submissionId'] = $SubmissionDAO->insertObject($submission);
+                $submission = $this->insertSubmission($article);
             }
 
             if (!$article['ojs']['publicationId']) {
@@ -189,6 +179,26 @@ class ImportCommand extends Command
             }
             $this->progressBar->advance();
         }
+    }
+
+    private function insertSubmission(array &$article)
+    {
+        /**
+         * @var SubmissionDAO
+         */
+        $SubmissionDAO = DAORegistry::getDAO('SubmissionDAO');
+        /**
+         * @var Submission
+         */
+        $submission = $SubmissionDAO->newDataObject();
+        $submission->setData('contextId', 1); // Journal = CSP
+        $submission->setData('status', STATUS_PUBLISHED);
+        $submission->setData('stage_id', WORKFLOW_STAGE_ID_PRODUCTION);
+        $submission->setData('dateLastActivity', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
+        $submission->setData('dateSubmitted', str_pad($article['published'], 10, '-01', STR_PAD_RIGHT));
+        $submission->setData('lastModified', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
+        $article['ojs']['submissionId'] = $SubmissionDAO->insertObject($submission);
+        return $submission;
     }
 
     private function assignPublicationToCategory(Publication $publication, array $article)
