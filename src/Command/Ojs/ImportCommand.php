@@ -47,7 +47,8 @@ class ImportCommand extends Command
             ->setDescription('Import all to OJS')
             ->addOption('ojs-basedir', null, InputOption::VALUE_REQUIRED, 'Base directory of OJS setup', '/app/ojs')
             ->addOption('journal-path', null, InputOption::VALUE_REQUIRED, 'Journal to import')
-            ->addOption('output', null, InputOption::VALUE_REQUIRED, 'Output directory', 'output');
+            ->addOption('output', null, InputOption::VALUE_REQUIRED, 'Output directory', 'output')
+            ->addOption('dont-insert-category', null, InputOption::VALUE_NONE, 'Dont insert category');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -141,7 +142,10 @@ class ImportCommand extends Command
             if (!$article['ojs']['publicationId']) {
                 $update = true;
                 $publication = $this->insertPublication($file, $article, $submission);
-                $this->assignPublicationToCategory($publication, $article);
+                $dontInsertCategory = $this->input->getOption('dont-insert-category');
+                if (!$dontInsertCategory) {
+                    $this->assignPublicationToCategory($publication, $article['category']);
+                }
             }
             if ($update) {
                 file_put_contents($file->getRealPath(), json_encode($article));
@@ -207,10 +211,10 @@ class ImportCommand extends Command
         return $submission;
     }
 
-    private function assignPublicationToCategory(Publication $publication, array $article)
+    private function assignPublicationToCategory(Publication $publication, string $categoryName)
     {
         $categoryDao = DAORegistry::getDAO('CategoryDAO'); /* @var $categoryDao CategoryDAO */
-        $category = $this->getCategory($article['category']);
+        $category = $this->getCategory($categoryName);
         $categoryDao->insertPublicationAssignment($category->getId(), $publication->getId());
     }
 
