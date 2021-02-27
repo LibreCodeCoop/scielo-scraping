@@ -19,7 +19,7 @@ class SetupOjsCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if (!$this->command_exist('git')) {
+        if (!$this->commandExist('git')) {
             $output->writeln('<error>Command git is necessary. Install git, please!</error>');
             return Command::FAILURE;
         }
@@ -80,7 +80,7 @@ class SetupOjsCommand extends Command
         return Command::SUCCESS;
     }
 
-    protected function command_exist(string $cmd)
+    protected function commandExist(string $cmd)
     {
         $return = shell_exec(sprintf("which %s", escapeshellarg($cmd)));
         return !empty($return);
