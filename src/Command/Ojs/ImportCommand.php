@@ -58,8 +58,8 @@ class ImportCommand extends Command
         $this->progressBar->start();
         $this->progressBar->setMessage('Calculating total itens to import...', 'status');
         $this->progressBar->setFormat(
-            "<fg=white;bg=cyan> %status:-45s%</>\n".
-            "\n".
+            "<fg=white;bg=cyan> %status:-45s%</>\n" .
+            "\n" .
             "%memory:44s%"
         );
         $this->progressBar->display();
@@ -67,8 +67,8 @@ class ImportCommand extends Command
         $this->progressBar->setEmptyBarCharacter("<fg=red>⚬</>");
         $this->progressBar->setProgressCharacter("<fg=green>➤</>");
         $this->progressBar->setFormat(
-            "<fg=white;bg=cyan> %status:-45s%</>\n".
-            "%current%/%max% [%bar%] %percent:3s%%\n".
+            "<fg=white;bg=cyan> %status:-45s%</>\n" .
+            "%current%/%max% [%bar%] %percent:3s%%\n" .
             "  %estimated:-20s%  %memory:20s%"
         );
         $total = $this->countIssues() + $this->countMetadata();
@@ -166,7 +166,7 @@ class ImportCommand extends Command
                 // 'disciplines', 'keywords', 'languages', 'subjects', 'supportingAgencies'
                 // categoryIds
                 $article['ojs']['publicationId'] = $PublicationDAO->insertObject($publication);
-        
+
                 if (!$submission) {
                     $submission = $SubmissionDAO->getById($article['ojs']['submissionId']);
                 }
@@ -222,7 +222,7 @@ class ImportCommand extends Command
                     $issue->setShowNumber(1);
                     $issue->setYear($year);
                     $issue->setShowYear(1);
-                    foreach($langs as $lang) {
+                    foreach ($langs as $lang) {
                         $issue->setTitle($attr['text'], $lang);
                     }
                     $issue->setShowTitle(1);
@@ -246,7 +246,7 @@ class ImportCommand extends Command
         $grid = $this->getGrid();
         foreach ($grid as $volumes) {
             foreach ($volumes as $issues) {
-                $total+= count($issues);
+                $total += count($issues);
             }
         }
         return $total;
@@ -306,7 +306,7 @@ class ImportCommand extends Command
         $JournalDAO = DAORegistry::getDAO('JournalDAO');
         $journals = $JournalDAO->getAll();
         if (!$journals) {
-            throw new RuntimeException('Create a journal in OJS first',);
+            throw new RuntimeException('Create a journal in OJS first');
         }
         while ($journal = $journals->next()) {
             $options[$journal->getPath()] = $journal;

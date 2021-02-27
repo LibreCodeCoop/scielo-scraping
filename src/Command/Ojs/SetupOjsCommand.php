@@ -42,12 +42,12 @@ class SetupOjsCommand extends Command
                 continue;
             }
             $question = new ChoiceQuestion(
-                'Confirm the path <info>'.$path.'</info>? ',
+                'Confirm the path <info>' . $path . '</info>? ',
                 ['y' => 'yes', 'n' => 'no']
             );
             $question->setErrorMessage('Response [%s] is invalid, only "y" or "n".');
             $yes = $helper->ask($input, $output, $question);
-        } while($yes != 'y');
+        } while ($yes != 'y');
 
         $question = new Question('Version of OJS: ');
         $question->setValidator(function ($value) {
