@@ -11,6 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use DAORegistry;
 use JournalDAO;
 use Publication;
+use Section;
 use SplFileInfo;
 use Submission;
 use Symfony\Component\Console\Exception\RuntimeException;
@@ -40,6 +41,8 @@ class ImportCommand extends Command
     private $progressBar;
     /** @var Category[] */
     private $category = [];
+    /** @var Section[] */
+    private $section = [];
 
     protected function configure()
     {
@@ -48,6 +51,7 @@ class ImportCommand extends Command
             ->addOption('ojs-basedir', null, InputOption::VALUE_REQUIRED, 'Base directory of OJS setup', '/app/ojs')
             ->addOption('journal-path', null, InputOption::VALUE_REQUIRED, 'Journal to import')
             ->addOption('output', null, InputOption::VALUE_REQUIRED, 'Output directory', 'output')
+            ->addOption('copy-category-to-section', null, InputOption::VALUE_NONE, 'Insert all category as section')
             ->addOption('dont-insert-category', null, InputOption::VALUE_NONE, 'Dont insert category');
     }
 
@@ -182,6 +186,13 @@ class ImportCommand extends Command
         foreach ($article['resume'] as $lang => $resume) {
             $publication->setData('abstract', $resume, $lang);
         }
+
+        $copyCategoryToSection = $this->input->getOption('copy-category-to-section');
+        if ($copyCategoryToSection) {
+            $section = $this->getSection($article['category']);
+            $publication->setData('sectionId', $section->getId());
+        }
+
         // 'disciplines', 'keywords', 'languages', 'subjects', 'supportingAgencies'
         // categoryIds
         $article['ojs']['publicationId'] = $PublicationDAO->insertObject($publication);
@@ -212,6 +223,25 @@ class ImportCommand extends Command
         $submission->setData('lastModified', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
         $article['ojs']['submissionId'] = $SubmissionDAO->insertObject($submission);
         return $submission;
+    }
+
+    private function getSection($name)
+    {
+        if (!isset($this->section[$name])) {
+            $journal = $this->getJournal();
+            $sectionDao = DAORegistry::getDAO('SectionDAO'); /* @var $sectionDao SectionDAO */
+            $this->section[$name] = $sectionDao->getByTitle($name, $journal->getId());
+            if (!$this->section[$name]) {
+                $langs = $journal->getSupportedLocales();
+                $this->section[$name] = $sectionDao->newDataObject();
+                $this->section[$name]->setContextId($journal->getId());
+                foreach ($langs as $lang) {
+                    $this->section[$name]->setTitle($name, $lang);
+                }
+                $sectionDao->insertObject($this->section[$name]);
+            }
+        }
+        return $this->section[$name];
     }
 
     private function assignPublicationToCategory(Publication $publication, string $categoryName)
