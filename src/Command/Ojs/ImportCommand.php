@@ -28,6 +28,12 @@ class ImportCommand extends Command
     private $grid;
     /** @var bool */
     private $doUpgradeGrid = false;
+    /** @var Finder */
+    private $metadataFinder;
+    /** @var int */
+    private $totalMetadata = 0;
+    /** @var ProgressBar */
+    private $progressBar;
 
     protected function configure()
     {
@@ -45,14 +51,45 @@ class ImportCommand extends Command
 
         $this->loadOjsBasedir();
         OjsProvider::getApplication();
+
+        $total = $this->countIssues() + $this->countMetadata();
+        $this->progressBar = new ProgressBar($this->output, $total);
+        $this->progressBar->start();
         $this->saveIssues();
         $this->saveSubmission();
+        $this->progressBar->finish();
         $output->writeln('');
         return Command::SUCCESS;
     }
 
+    private function getMetadataFinder(): Finder
+    {
+        if (!$this->metadataFinder) {
+            $this->metadataFinder = Finder::create()
+                ->files()
+                ->name('metadata_*.json')
+                ->in($this->getOutputDirectory());
+        }
+        return $this->metadataFinder;
+    }
+
+    private function countMetadata(): int
+    {
+        if (!$this->totalMetadata) {
+            $finder = $this->getMetadataFinder();
+            $this->totalMetadata = $finder->count();
+        }
+        return $this->totalMetadata;
+    }
+
     private function saveSubmission()
     {
+        $finder = $this->getMetadataFinder();
+        $total = $this->countMetadata();
+
+        if (!$total) {
+            throw new RuntimeException('Metadata json files not found.');
+        }
         /**
          * @var SubmissionDAO
          */
@@ -61,25 +98,11 @@ class ImportCommand extends Command
          * @var PublicationDAO
          */
         $PublicationDAO = DAORegistry::getDAO('PublicationDAO');
-        // Insert submissions
-        $finder = Finder::create()
-            ->files()
-            ->name('metadata_*.json')
-            ->in($this->getOutputDirectory());
-
-        $total = $finder->count();
-
-        if (!$total) {
-            throw new RuntimeException('Metadata json files not found.');
-        }
-        $progressBar = new ProgressBar($this->output, $total);
-        $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory:6s%');
-        $progressBar->start();
         foreach ($finder as $file) {
             $article = file_get_contents($file->getRealPath());
             $article = json_decode($article, true);
             if (!$article) {
-                $progressBar->advance();
+                $this->progressBar->advance();
                 continue;
             }
 
@@ -130,9 +153,8 @@ class ImportCommand extends Command
             if ($update) {
                 file_put_contents($file->getRealPath(), json_encode($article));
             }
-            $progressBar->advance();
+            $this->progressBar->advance();
         }
-        $progressBar->finish();
     }
 
     private function getIssue($year, $volume, $issueName)
@@ -153,20 +175,18 @@ class ImportCommand extends Command
         if (!$total) {
             throw new RuntimeException('No issues to import.');
         }
-        $progressBar = new ProgressBar($this->output, $total);
-        $progressBar->start();
 
         $grid = $this->getGrid();
         foreach ($grid as $year => $volumes) {
             foreach ($volumes as $volume => $issues) {
                 foreach ($issues as $issueName => $attr) {
                     if (isset($attr['issueId'])) {
-                        $progressBar->advance();
+                        $this->progressBar->advance();
                         continue;
                     }
                     $issues = $issueDAO->getIssuesByIdentification($journal->getId(), $volume, $attr['text'], $year);
                     if ($issues->getCount()) {
-                        $progressBar->advance();
+                        $this->progressBar->advance();
                         continue;
                     }
                     // Insert issue
@@ -185,11 +205,10 @@ class ImportCommand extends Command
                     $issue->setPublished(1);
                     $issueId = $issueDAO->insertObject($issue);
                     $this->setGridAttribute($year, $volume, $issueName, 'issueId', $issueId);
-                    $progressBar->advance();
+                    $this->progressBar->advance();
                 }
             }
         }
-        $progressBar->finish();
     }
 
     /**
