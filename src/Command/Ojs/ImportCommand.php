@@ -64,7 +64,8 @@ class ImportCommand extends Command
             ->files()
             ->name('metadata_*.json')
             ->in($this->getOutputDirectory());
-        if (!$finder->count()) {
+        $total = $finder->count();
+        if (!$total) {
             throw new RuntimeException('Metadata json files not found.');
         }
         foreach ($finder as $file) {
@@ -137,6 +138,7 @@ class ImportCommand extends Command
          * @var IssueDAO
          */
         $issueDAO = DAORegistry::getDAO('IssueDAO');
+        $total = $this->countIssues();
         $grid = $this->getGrid();
         foreach ($grid as $year => $volumes) {
             foreach ($volumes as $volume => $issues) {
@@ -167,6 +169,23 @@ class ImportCommand extends Command
                 }
             }
         }
+    }
+
+    /**
+     * Count issues
+     *
+     * @return integer
+     */
+    private function countIssues(): int
+    {
+        $total = 0;
+        $grid = $this->getGrid();
+        foreach ($grid as $volumes) {
+            foreach ($volumes as $issues) {
+                $total+= count($issues);
+            }
+        }
+        return $total;
     }
 
     private function setGridAttribute($year, $volume, $issueName, $attribute, $value)
