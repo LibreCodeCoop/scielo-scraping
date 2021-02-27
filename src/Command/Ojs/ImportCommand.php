@@ -52,8 +52,10 @@ class ImportCommand extends Command
         $this->loadOjsBasedir();
         OjsProvider::getApplication();
 
+        $this->output->write('Calculating total itens to import...');
         $total = $this->countIssues() + $this->countMetadata();
         $this->progressBar = new ProgressBar($this->output, $total);
+        $this->output->write("\r");
         $this->progressBar->start();
         $this->saveIssues();
         $this->saveSubmission();
