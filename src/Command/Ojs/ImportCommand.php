@@ -9,6 +9,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use DAORegistry;
+use DAOResultFactory;
 use JournalDAO;
 use Publication;
 use Section;
@@ -61,8 +62,9 @@ class ImportCommand extends Command
         $this->output = $output;
 
         $this->loadOjsBasedir();
+        xdebug_break();
         OjsProvider::getApplication();
-
+        return;
         $this->startProgressBar();
 
         $this->saveIssues();
@@ -299,7 +301,7 @@ class ImportCommand extends Command
                         $this->progressBar->advance();
                         continue;
                     }
-                    $issues = $issueDAO->getIssuesByIdentification($journal->getId(), $volume, $attr['text'], $year);
+                    $issues = $this->getIssueFromDb($journal->getId(), $volume, $year, $attr['text']);
                     if ($issues->getCount()) {
                         $this->progressBar->advance();
                         continue;
@@ -325,6 +327,31 @@ class ImportCommand extends Command
             }
         }
         $this->saveGrid();
+    }
+
+    private function getIssueFromDb($journalId, $volume, $year, $title)
+    {
+        /**
+         * @var IssueDAO
+         */
+        $issueDAO = DAORegistry::getDAO('IssueDAO');
+
+        $sqlTitleJoin = ' LEFT JOIN issue_settings iss1 ON (i.issue_id = iss1.issue_id AND iss1.setting_name = \'title\')';
+        $params[] = (int) $journalId;
+        $params[] = (int) $volume;
+        $params[] = (int) $year;
+        $params[] = str_replace('.', '%', strtolower($title));
+        $params[] = str_replace('.', '%', strtolower($title));
+        $sql =
+            'SELECT i.*
+            FROM issues i'
+            . $sqlTitleJoin
+            . ' WHERE i.journal_id = ?'
+            . ' AND i.volume = ?'
+            . ' AND i.year = ?'
+            . ' AND (LOWER(i.number) LIKE ? OR LOWER(iss1.setting_value) LIKE ?)';
+        $result = $issueDAO->retrieve($sql, $params);
+        return new DAOResultFactory($result, $issueDAO, '_returnIssueFromRow');
     }
 
     /**
