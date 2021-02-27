@@ -230,7 +230,7 @@ class ImportCommand extends Command
 
     private function getIssue($year, $volume, $issueName)
     {
-        $this->getGrid()[$year][$volume][$issueName];
+        return $this->getGrid()[$year][$volume][$issueName];
     }
 
     private function saveIssues()
