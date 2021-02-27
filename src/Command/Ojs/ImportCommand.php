@@ -27,7 +27,7 @@ class ImportCommand extends Command
     /** @var \stdClass */
     private $grid;
     /** @var bool */
-    private $doUpgradeGrid = false;
+    private $doSaveGrid = false;
     /** @var Finder */
     private $metadataFinder;
     /** @var int */
@@ -52,6 +52,20 @@ class ImportCommand extends Command
         $this->loadOjsBasedir();
         OjsProvider::getApplication();
 
+        $this->startProgressBar();
+
+        $this->saveIssues();
+        $this->saveSubmission();
+
+        $this->progressBar->setMessage('Done! :-D', 'status');
+        $this->progressBar->finish();
+
+        $output->writeln('');
+        return Command::SUCCESS;
+    }
+
+    private function startProgressBar()
+    {
         $this->output->writeln('');
         $this->output->writeln('');
         $this->progressBar = new ProgressBar($this->output);
@@ -73,15 +87,6 @@ class ImportCommand extends Command
         );
         $total = $this->countIssues() + $this->countMetadata();
         $this->progressBar->setMaxSteps($total);
-
-        $this->saveIssues();
-        $this->saveSubmission();
-
-        $this->progressBar->setMessage('Done! :-D', 'status');
-        $this->progressBar->finish();
-
-        $output->writeln('');
-        return Command::SUCCESS;
     }
 
     private function getMetadataFinder(): Finder
@@ -233,6 +238,7 @@ class ImportCommand extends Command
                 }
             }
         }
+        $this->saveGrid();
     }
 
     /**
@@ -348,9 +354,9 @@ class ImportCommand extends Command
         }
     }
 
-    private function __destruct()
+    private function saveGrid()
     {
-        if ($this->doUpgradeGrid) {
+        if ($this->doSaveGrid) {
             file_put_contents($this->getOutputDirectory() . '/grid.json', json_encode($this->getGrid()));
         }
     }
