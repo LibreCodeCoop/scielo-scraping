@@ -112,6 +112,9 @@ class ImportCommand extends Command
                 // categoryIds
                 $article['ojs']['publicationId'] = $PublicationDAO->insertObject($publication);
         
+                if (!$submission) {
+                    $submission = $SubmissionDAO->getById($article['ojs']['submissionId']);
+                }
                 $submission->setData('currentPublicationId', $article['ojs']['publicationId']);
                 $SubmissionDAO->updateObject($submission);
             }
