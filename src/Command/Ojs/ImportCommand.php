@@ -366,6 +366,14 @@ class ImportCommand extends Command
         while ($journal = $journals->next()) {
             $options[$journal->getPath()] = $journal;
         }
+        $journalPath = $this->input->getOption('journal-path');
+        if ($journalPath) {
+            if (!isset($options[$journalPath])) {
+                throw new RuntimeException('Invalid option: journal-path not found in OJS');
+            }
+            return $options[$journalPath];
+        }
+
         if (count($options) > 1) {
             $helper = $this->getHelper('question');
             $question = new ChoiceQuestion(
