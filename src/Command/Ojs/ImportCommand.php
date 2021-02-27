@@ -11,6 +11,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use DAORegistry;
 use JournalDAO;
 use Publication;
+use SplFileInfo;
+use Submission;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Question\ChoiceQuestion;
@@ -122,14 +124,6 @@ class ImportCommand extends Command
             throw new RuntimeException('Metadata json files not found.');
         }
         $this->progressBar->setMessage('Importing submission...', 'status');
-        /**
-         * @var SubmissionDAO
-         */
-        $SubmissionDAO = DAORegistry::getDAO('SubmissionDAO');
-        /**
-         * @var PublicationDAO
-         */
-        $PublicationDAO = DAORegistry::getDAO('PublicationDAO');
         foreach ($finder as $file) {
             $article = file_get_contents($file->getRealPath());
             $article = json_decode($article, true);
@@ -146,39 +140,51 @@ class ImportCommand extends Command
 
             if (!$article['ojs']['publicationId']) {
                 $update = true;
-
-                list($year, $volume, $issueName) = explode('/', $file->getRelativePath());
-                $issue = $this->getIssue($year, $volume, $issueName);
-
-                $publication = $PublicationDAO->newDataObject();
-                $publication->setData('submissionId', $article['ojs']['submissionId']);
-                $publication->setData('status', 1); // published
-                $publication->setData('issueId', $issue['issueId']);
-                $publication->setData('locale', $this->identifyPrimaryLanguage($article));
-                $publication->setData('pub-id::doi', $article['doi']);
-                foreach ($article['title'] as $lang => $title) {
-                    $publication->setData('title', $title, $lang);
-                }
-                foreach ($article['resume'] as $lang => $resume) {
-                    $publication->setData('abstract', $resume, $lang);
-                }
-                // 'disciplines', 'keywords', 'languages', 'subjects', 'supportingAgencies'
-                // categoryIds
-                $article['ojs']['publicationId'] = $PublicationDAO->insertObject($publication);
-
+                $publication = $this->insertPublication($file, $article, $submission);
                 $this->assignPublicationToCategory($publication, $article);
-
-                if (!$submission) {
-                    $submission = $SubmissionDAO->getById($article['ojs']['submissionId']);
-                }
-                $submission->setData('currentPublicationId', $article['ojs']['publicationId']);
-                $SubmissionDAO->updateObject($submission);
             }
             if ($update) {
                 file_put_contents($file->getRealPath(), json_encode($article));
             }
             $this->progressBar->advance();
         }
+    }
+
+    public function insertPublication(SplFileInfo $file, array &$article, ?Submission $submission)
+    {
+        /**
+         * @var SubmissionDAO
+         */
+        $SubmissionDAO = DAORegistry::getDAO('SubmissionDAO');
+        /**
+         * @var PublicationDAO
+         */
+        $PublicationDAO = DAORegistry::getDAO('PublicationDAO');
+        list($year, $volume, $issueName) = explode('/', $file->getRelativePath());
+        $issue = $this->getIssue($year, $volume, $issueName);
+
+        $publication = $PublicationDAO->newDataObject();
+        $publication->setData('submissionId', $article['ojs']['submissionId']);
+        $publication->setData('status', 1); // published
+        $publication->setData('issueId', $issue['issueId']);
+        $publication->setData('locale', $this->identifyPrimaryLanguage($article));
+        $publication->setData('pub-id::doi', $article['doi']);
+        foreach ($article['title'] as $lang => $title) {
+            $publication->setData('title', $title, $lang);
+        }
+        foreach ($article['resume'] as $lang => $resume) {
+            $publication->setData('abstract', $resume, $lang);
+        }
+        // 'disciplines', 'keywords', 'languages', 'subjects', 'supportingAgencies'
+        // categoryIds
+        $article['ojs']['publicationId'] = $PublicationDAO->insertObject($publication);
+
+        if (!$submission) {
+            $submission = $SubmissionDAO->getById($article['ojs']['submissionId']);
+        }
+        $submission->setData('currentPublicationId', $article['ojs']['publicationId']);
+        $SubmissionDAO->updateObject($submission);
+        return $publication;
     }
 
     private function insertSubmission(array &$article)
