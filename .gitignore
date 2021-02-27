@@ -4,4 +4,5 @@
 /logs
 /ojs
 /volumes
+/.vscode
 .env
