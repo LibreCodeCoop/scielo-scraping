@@ -10,7 +10,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use DAORegistry;
 use DAOResultFactory;
-use Issue;
+use Journal;
 use JournalDAO;
 use Publication;
 use Section;
@@ -45,6 +45,8 @@ class ImportCommand extends Command
     private $category = [];
     /** @var Section[] */
     private $section = [];
+    /** @var Journal */
+    private $journal;
 
     protected function configure()
     {
@@ -431,8 +433,11 @@ class ImportCommand extends Command
         return $this->grid;
     }
 
-    private function getJournal()
+    private function getJournal(): Journal
     {
+        if ($this->journal) {
+            return $this->journal;
+        }
         /**
          * @var JournalDAO
          */
@@ -449,7 +454,7 @@ class ImportCommand extends Command
             if (!isset($options[$journalPath])) {
                 throw new RuntimeException('Invalid option: journal-path not found in OJS');
             }
-            return $options[$journalPath];
+            return $this->journal = $options[$journalPath];
         }
 
         if (count($options) > 1) {
@@ -460,9 +465,9 @@ class ImportCommand extends Command
             );
             $question->setErrorMessage('Journal path %s is invalid.');
             $journalPath = $helper->ask($this->input, $this->output, $question);
-            return $journals[array_keys($options)[$journalPath]];
+            return $this->journal = $journals[array_keys($options)[$journalPath]];
         }
-        return current($options);
+        return $this->journal = current($options);
     }
 
     private function identifyPrimaryLanguage($article)
