@@ -53,7 +53,7 @@ class ImportCommand extends Command
             ->addOption('journal-path', null, InputOption::VALUE_REQUIRED, 'Journal to import')
             ->addOption('output', null, InputOption::VALUE_REQUIRED, 'Output directory', 'output')
             ->addOption('copy-category-to-section', null, InputOption::VALUE_NONE, 'Insert all category as section')
-            ->addOption('dont-insert-category', null, InputOption::VALUE_NONE, 'Dont insert category');
+            ->addOption('insert-category', null, InputOption::VALUE_NONE, 'Insert category');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -148,8 +148,8 @@ class ImportCommand extends Command
             if (!$article['ojs']['publicationId']) {
                 $update = true;
                 $publication = $this->insertPublication($file, $article, $submission);
-                $dontInsertCategory = $this->input->getOption('dont-insert-category');
-                if (!$dontInsertCategory) {
+                $insertCategory = $this->input->getOption('insert-category');
+                if ($insertCategory) {
                     $this->assignPublicationToCategory($publication, $article['category']);
                 }
             }
