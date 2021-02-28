@@ -223,6 +223,7 @@ class ImportCommand extends Command
         $submission->setData('dateLastActivity', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
         $submission->setData('dateSubmitted', str_pad($article['published'], 10, '-01', STR_PAD_RIGHT));
         $submission->setData('lastModified', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
+        $submission->setData('submissionProgress', 0); // ==0 means complete
         $article['ojs']['submissionId'] = $SubmissionDAO->insertObject($submission);
         return $submission;
     }
