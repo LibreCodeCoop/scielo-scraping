@@ -306,9 +306,9 @@ class ImportCommand extends Command
                         $this->progressBar->advance();
                         continue;
                     }
-                    $issues = $this->getIssueFromDb($journal->getId(), $volume, $year, $attr['text']);
-                    if ($issues->getCount()) {
-                        $issue = $issues->next();
+                    $issuesFromDatabase = $this->getIssueFromDb($journal->getId(), $volume, $year, $attr['text']);
+                    if ($issuesFromDatabase->getCount()) {
+                        $issue = $issuesFromDatabase->next();
                         $this->setGridAttribute($issue->getYear(), $issue->getvolume(), $issueName, 'issueId', $issue->getId());
                         $this->progressBar->advance();
                         continue;
