@@ -217,7 +217,7 @@ class ImportCommand extends Command
         $submission = $SubmissionDAO->newDataObject();
         $submission->setData('contextId', 1); // Journal = CSP
         $submission->setData('status', STATUS_PUBLISHED);
-        $submission->setData('stage_id', WORKFLOW_STAGE_ID_PRODUCTION);
+        $submission->setData('stageId', WORKFLOW_STAGE_ID_PRODUCTION);
         $submission->setData('dateLastActivity', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
         $submission->setData('dateSubmitted', str_pad($article['published'], 10, '-01', STR_PAD_RIGHT));
         $submission->setData('lastModified', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
