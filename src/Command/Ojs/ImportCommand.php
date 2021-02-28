@@ -10,6 +10,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use DAORegistry;
 use DAOResultFactory;
+use Issue;
 use JournalDAO;
 use Publication;
 use Section;
@@ -333,7 +334,14 @@ class ImportCommand extends Command
         $this->saveGrid();
     }
 
-    private function getIssueFromDb($journalId, $volume, $year, $title)
+    /**
+     * @param integer $journalId
+     * @param integer $volume
+     * @param integer $year
+     * @param string $title
+     * @return DAOResultFactory[Issue]
+     */
+    private function getIssueFromDb(int $journalId, int $volume, int $year, string $title): DAOResultFactory
     {
         /**
          * @var IssueDAO
