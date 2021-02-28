@@ -179,6 +179,7 @@ class ImportCommand extends Command
         $publication->setData('locale', $this->identifyPrimaryLanguage($article));
         $publication->setData('pub-id::doi', $article['doi']);
         $publication->setData('version', 1);
+        $publication->setData('copyrightYear', substr($article['published'], 0, 4));
         $publication->setData('datePublished', $article['published']);
         $publication->setData('lastModified', $article['updated']);
         foreach ($article['title'] as $lang => $title) {
