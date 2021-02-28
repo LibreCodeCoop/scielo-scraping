@@ -169,8 +169,7 @@ class ImportCommand extends Command
          * @var PublicationDAO
          */
         $PublicationDAO = DAORegistry::getDAO('PublicationDAO');
-        list($year, $volume, $issueName) = explode('/', $file->getRelativePath());
-        $issue = $this->getIssue($year, $volume, $issueName);
+        $issue = $this->getIssueByFile($file);
 
         $publication = $PublicationDAO->newDataObject();
         $publication->setData('submissionId', $article['ojs']['submissionId']);
@@ -272,8 +271,12 @@ class ImportCommand extends Command
         return $this->category[$name];
     }
 
-    private function getIssue($year, $volume, $issueName)
+    private function getIssueByFile(SplFileInfo $file)
     {
+        $path = $file->getRelativePath();
+        $path = preg_replace('/'.$this->getOutputDirectory().'/', '', $path, 1);
+        $path = trim($path, '/');
+        list($year, $volume, $issueName) = explode('/', $path);
         return $this->getGrid()[$year][$volume][$issueName];
     }
 
@@ -302,6 +305,8 @@ class ImportCommand extends Command
                     }
                     $issues = $this->getIssueFromDb($journal->getId(), $volume, $year, $attr['text']);
                     if ($issues->getCount()) {
+                        $issue = $issues->next();
+                        $this->setGridAttribute($issue->getYear(), $issue->getvolume(), $issueName, 'issueId', $issue->getId());
                         $this->progressBar->advance();
                         continue;
                     }
