@@ -62,9 +62,8 @@ class ImportCommand extends Command
         $this->output = $output;
 
         $this->loadOjsBasedir();
-        xdebug_break();
         OjsProvider::getApplication();
-        return;
+
         $this->startProgressBar();
 
         $this->saveIssues();
