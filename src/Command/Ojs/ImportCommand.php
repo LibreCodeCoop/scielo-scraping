@@ -231,7 +231,7 @@ class ImportCommand extends Command
             $journal = $this->getJournal();
             $sectionDao = DAORegistry::getDAO('SectionDAO'); /* @var $sectionDao SectionDAO */
             $this->section[$name] = $sectionDao->getByTitle($name, $journal->getId());
-            if (!$this->section[$name]) {
+            if (empty($this->section[$name])) {
                 $langs = $journal->getSupportedLocales();
                 $this->section[$name] = $sectionDao->newDataObject();
                 $this->section[$name]->setContextId($journal->getId());
