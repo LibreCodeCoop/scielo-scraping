@@ -174,7 +174,7 @@ class ImportCommand extends Command
 
         $publication = $PublicationDAO->newDataObject();
         $publication->setData('submissionId', $article['ojs']['submissionId']);
-        $publication->setData('status', 1); // published
+        $publication->setData('status', STATUS_PUBLISHED);
         $publication->setData('issueId', $issue['issueId']);
         $publication->setData('locale', $this->identifyPrimaryLanguage($article));
         $publication->setData('pub-id::doi', $article['doi']);
