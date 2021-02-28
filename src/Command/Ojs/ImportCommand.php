@@ -274,7 +274,7 @@ class ImportCommand extends Command
     private function getIssueByFile(SplFileInfo $file)
     {
         $path = $file->getRelativePath();
-        $path = preg_replace('/'.$this->getOutputDirectory().'/', '', $path, 1);
+        $path = preg_replace('/' . $this->getOutputDirectory() . '/', '', $path, 1);
         $path = trim($path, '/');
         list($year, $volume, $issueName) = explode('/', $path);
         return $this->getGrid()[$year][$volume][$issueName];
