@@ -20,6 +20,7 @@ use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Finder\Finder;
+use UserGroup;
 
 class ImportCommand extends Command
 {
@@ -45,6 +46,8 @@ class ImportCommand extends Command
     private $category = [];
     /** @var Section[] */
     private $section = [];
+    /** @var UserGroup */
+    private $authorGroup;
     /** @var Journal */
     private $journal;
 
@@ -201,12 +204,63 @@ class ImportCommand extends Command
         // categoryIds
         $article['ojs']['publicationId'] = $PublicationDAO->insertObject($publication);
 
+        $this->insertAuthor($publication, $article);
+
         if (!$submission) {
             $submission = $SubmissionDAO->getById($article['ojs']['submissionId']);
         }
         $submission->setData('currentPublicationId', $article['ojs']['publicationId']);
         $SubmissionDAO->updateObject($submission);
         return $publication;
+    }
+
+    private function insertAuthor(Publication $publication, array $article)
+    {
+        /**
+         * @var PublicationDAO
+         */
+        $PublicationDAO = DAORegistry::getDAO('PublicationDAO');
+        $authorDao = DAORegistry::getDAO('AuthorDAO'); /** @var $authorDao AuthorDAO */
+        foreach ($article['authors'] as $key => $row) {
+            $author = $authorDao->newDataObject(); /** @var $author PKPAuthor */
+            $author->setData('publicationId', $publication->getId());
+            $author->setData('seq', $key);
+            $author->setData('givenName', $row['name']);
+            $author->setData('userGroupId', $this->getAuthorGroup()->getId());
+            if (!empty($row['decreased'])) {
+                $author->setData('authorContribution', $row['decreased']);
+            }
+            if (!empty($row['foundation'])) {
+                $author->setData('affiliation', $row['foundation']);
+            }
+            if (!empty($row['orcid'])) {
+                $author->setData('orcid', $row['orcid']);
+            }
+            if (empty($row['email'])) {
+                $author->setData('email', $this->getJournal()->getContactEmail());
+            } else {
+                $author->setData('email', $row['email']);
+            }
+            if ($key == 0) {
+                $author->setPrimaryContact(true);
+            }
+            $author->setIncludeInBrowse(true);
+            $authorDao->insertObject($author);
+            if ($key == 0) {
+                $publication->setData('primaryContactId', $author->getId());
+                $PublicationDAO->updateObject($publication);
+            }
+        }
+    }
+
+    private function getAuthorGroup(): UserGroup
+    {
+        if (!$this->authorGroup) {
+            $journal = $this->getJournal();
+            $userGroupDao = DAORegistry::getDAO('UserGroupDAO'); /* @var $userGroupDao UserGroupDAO */
+            $this->authorGroup = $userGroupDao->getDefaultByRoleId($journal->getId(), ROLE_ID_AUTHOR);
+        }
+        return $this->authorGroup;
     }
 
     private function insertSubmission(array &$article)
