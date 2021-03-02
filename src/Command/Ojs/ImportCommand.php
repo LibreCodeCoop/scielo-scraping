@@ -10,8 +10,11 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use DAORegistry;
 use DAOResultFactory;
+use Genre;
 use Journal;
 use JournalDAO;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 use Publication;
 use ScieloScrapping\Service\ArticleService;
 use Section;
@@ -51,6 +54,8 @@ class ImportCommand extends Command
     private $authorGroup;
     /** @var Journal */
     private $journal;
+    /** @var Genre */
+    private $genre;
 
     protected function configure()
     {
@@ -59,6 +64,7 @@ class ImportCommand extends Command
             ->addOption('ojs-basedir', null, InputOption::VALUE_REQUIRED, 'Base directory of OJS setup', '/app/ojs')
             ->addOption('journal-path', null, InputOption::VALUE_REQUIRED, 'Journal to import')
             ->addOption('output', null, InputOption::VALUE_REQUIRED, 'Output directory', 'output')
+            ->addOption('default-genre', null, InputOption::VALUE_REQUIRED, 'Default genre key', 'OTHER')
             ->addOption('copy-category-to-section', null, InputOption::VALUE_NONE, 'Insert all category as section')
             ->addOption('insert-category', null, InputOption::VALUE_NONE, 'Insert category');
     }
@@ -70,6 +76,10 @@ class ImportCommand extends Command
 
         $this->loadOjsBasedir();
         OjsProvider::getApplication();
+        // only for validate before start import
+        $this->getDefaultGenre();
+        $this->logger = new Logger('SCIELO');
+        $this->logger->pushHandler(new StreamHandler('logs/scielo.log', Logger::DEBUG));
 
         $this->startProgressBar();
 
@@ -163,7 +173,62 @@ class ImportCommand extends Command
         }
     }
 
-    public function insertPublication(SplFileInfo $file, array &$article, ?Submission $submission)
+    private function attachFiles(Publication $publication, Submission $submission, ArticleService $article, SplFileInfo $file)
+    {
+        $genreId = $this->getDefaultGenre()->getid();
+        $basePath = $this->getOutputDirectory() . '/' . $file->getRelativePath();
+        $submissionFileDao = DAORegistry::getDAO('SubmissionFileDAO'); /* @var $submissionFileDao SubmissionFileDAO */
+        $articleGalleyDao = DAORegistry::getDAO('ArticleGalleyDAO'); /* @var $articleGalleyDao ArticleGalleyDAO */
+
+        foreach ($article->getFormats() as $format => $langs) {
+            foreach (array_keys($langs) as $lang) {
+                $articleGalley = $articleGalleyDao->newDataObject();
+                $articleGalley->setData('publicationId', $publication->getId());
+                $articleGalley->setLabel(strtoupper($format));
+                $articleGalley->setLocale($lang);
+                $articleGalleyDao->insertObject($articleGalley);
+
+                $submissionFile = $submissionFileDao->newDataObjectByGenreId($genreId); /* @var $submissionFile SubmissionFile */
+                $submissionFile->setSubmissionId($submission->getId());
+                $submissionFile->setSubmissionLocale($submission->getData('locale'));
+                $submissionFile->setGenreId($genreId);
+                // $submissionFile->setFileStage(WORKFLOW_STAGE_ID_PRODUCTION);
+                $submissionFile->setFileStage(SUBMISSION_FILE_PRODUCTION_READY);
+                $submissionFile->setDateUploaded($article->getPublished());
+                $submissionFile->setDateModified($article->getUpdated());
+                $submissionFile->setAssocType(ASSOC_TYPE_SUBMISSION_FILE);
+                $submissionFile->setAssocId($articleGalley->getId());
+                switch ($format) {
+                    case 'text':
+                        $submissionFile->setFileType('text/html');
+                        $fileName = $lang . '.html';
+                        break;
+                    case 'pdf':
+                        $submissionFile->setFileType('application/pdf');
+                        $fileName = $lang . '.pdf';
+                        break;
+                }
+                $submissionFile->setFileSize();
+                $submissionFileDao->insertObject($submissionFile, $fileName, true);
+                // _fileStageToPath
+            }
+        }
+    }
+
+    private function getDefaultGenre(): Genre
+    {
+        if (!$this->genre) {
+            $genreDao = DAORegistry::getDAO('GenreDAO'); /* @var $genreDao GenreDAO */
+            $defaultKey = $this->input->getOption('default-genre');
+            $this->genre = $genreDao->getByKey($defaultKey);
+            if (!$this->genre) {
+                throw new RuntimeException('Invalid default genre key');
+            }
+        }
+        return $this->genre;
+    }
+
+    private function insertPublication(SplFileInfo $file, ArticleService &$article, ?Submission $submission)
     {
         /**
          * @var SubmissionDAO
