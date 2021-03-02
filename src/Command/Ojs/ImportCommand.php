@@ -138,29 +138,26 @@ class ImportCommand extends Command
         }
         $this->progressBar->setMessage('Importing submission...', 'status');
         foreach ($finder as $file) {
-            $article = file_get_contents($file->getRealPath());
-            $article = json_decode($article, true);
-            if (!$article) {
+            $article = new ArticleService([
+                'logger' => $this->logger,
+                'base_directory' => $this->getOutputDirectory()
+            ]);
+            if (!$article->loadFromFile($file->getRealPath())) {
                 $this->progressBar->advance();
                 continue;
             }
 
-            $update = false;
-            if (!$article['ojs']['submissionId']) {
-                $update = true;
+            if (!$article->getOjs()['submissionId']) {
                 $submission = $this->insertSubmission($article);
             }
 
-            if (!$article['ojs']['publicationId']) {
-                $update = true;
+            if (!$article->getOjs()['publicationId']) {
                 $publication = $this->insertPublication($file, $article, $submission);
                 $insertCategory = $this->input->getOption('insert-category');
                 if ($insertCategory) {
-                    $this->assignPublicationToCategory($publication, $article['category']);
+                    $this->assignPublicationToCategory($publication, $article->getCategory());
                 }
-            }
-            if ($update) {
-                file_put_contents($file->getRealPath(), json_encode($article));
+                $this->attachFiles($publication, $submission, $article, $file);
             }
             $this->progressBar->advance();
         }
