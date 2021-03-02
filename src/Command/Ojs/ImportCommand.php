@@ -13,6 +13,7 @@ use DAOResultFactory;
 use Journal;
 use JournalDAO;
 use Publication;
+use ScieloScrapping\Service\ArticleService;
 use Section;
 use SplFileInfo;
 use Submission;
@@ -178,50 +179,53 @@ class ImportCommand extends Command
         $issue = $this->getIssueByFile($file);
 
         $publication = $PublicationDAO->newDataObject();
-        $publication->setData('submissionId', $article['ojs']['submissionId']);
+        $publication->setData('submissionId', $article->getOjs()['submissionId']);
         $publication->setData('status', STATUS_PUBLISHED);
         $publication->setData('issueId', $issue['issueId']);
         $publication->setData('locale', $this->identifyPrimaryLanguage($article));
-        $publication->setData('pub-id::doi', $article['doi']);
+        $publication->setData('pub-id::doi', $article->getDoi());
         $publication->setData('version', 1);
-        $publication->setData('copyrightYear', substr($article['published'], 0, 4));
-        $publication->setData('datePublished', $article['published']);
-        $publication->setData('lastModified', $article['updated']);
-        foreach ($article['title'] as $lang => $title) {
+        $publication->setData('copyrightYear', substr($article->getPublished(), 0, 4));
+        $publication->setData('datePublished', $article->getPublished());
+        $publication->setData('lastModified', $article->getUpdated());
+        foreach ($article->getTitle() as $lang => $title) {
             $publication->setData('title', $title, $lang);
         }
-        foreach ($article['resume'] as $lang => $resume) {
+        foreach ($article->getResume() as $lang => $resume) {
             $publication->setData('abstract', $resume, $lang);
         }
 
         $copyCategoryToSection = $this->input->getOption('copy-category-to-section');
         if ($copyCategoryToSection) {
-            $section = $this->getSection($article['category']);
+            $section = $this->getSection($article->getCategory());
             $publication->setData('sectionId', $section->getId());
         }
 
         // 'disciplines', 'keywords', 'languages', 'subjects', 'supportingAgencies'
         // categoryIds
-        $article['ojs']['publicationId'] = $PublicationDAO->insertObject($publication);
+        $article->setOjs(array_merge(
+            $article->getOjs(),
+            ['publicationId' => $PublicationDAO->insertObject($publication)]
+        ));
 
         $this->insertAuthor($publication, $article);
 
         if (!$submission) {
-            $submission = $SubmissionDAO->getById($article['ojs']['submissionId']);
+            $submission = $SubmissionDAO->getById($article->getOjs()['submissionId']);
         }
-        $submission->setData('currentPublicationId', $article['ojs']['publicationId']);
+        $submission->setData('currentPublicationId', $article->getOjs()['publicationId']);
         $SubmissionDAO->updateObject($submission);
         return $publication;
     }
 
-    private function insertAuthor(Publication $publication, array $article)
+    private function insertAuthor(Publication $publication, ArticleService $article)
     {
         /**
          * @var PublicationDAO
          */
         $PublicationDAO = DAORegistry::getDAO('PublicationDAO');
         $authorDao = DAORegistry::getDAO('AuthorDAO'); /** @var $authorDao AuthorDAO */
-        foreach ($article['authors'] as $key => $row) {
+        foreach ($article->getAuthors() as $key => $row) {
             $author = $authorDao->newDataObject(); /** @var $author PKPAuthor */
             $author->setData('publicationId', $publication->getId());
             $author->setData('seq', $key);
@@ -263,7 +267,7 @@ class ImportCommand extends Command
         return $this->authorGroup;
     }
 
-    private function insertSubmission(array &$article)
+    private function insertSubmission(ArticleService &$article)
     {
         /**
          * @var SubmissionDAO
@@ -276,11 +280,14 @@ class ImportCommand extends Command
         $submission->setData('contextId', 1); // Journal = CSP
         $submission->setData('status', STATUS_PUBLISHED);
         $submission->setData('stageId', WORKFLOW_STAGE_ID_PRODUCTION);
-        $submission->setData('dateLastActivity', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
-        $submission->setData('dateSubmitted', str_pad($article['published'], 10, '-01', STR_PAD_RIGHT));
-        $submission->setData('lastModified', str_pad($article['updated'], 10, '-01', STR_PAD_RIGHT));
+        $submission->setData('dateLastActivity', str_pad($article->getUpdated(), 10, '-01', STR_PAD_RIGHT));
+        $submission->setData('dateSubmitted', str_pad($article->getPublished(), 10, '-01', STR_PAD_RIGHT));
+        $submission->setData('lastModified', str_pad($article->getUpdated(), 10, '-01', STR_PAD_RIGHT));
         $submission->setData('submissionProgress', 0); // ==0 means complete
-        $article['ojs']['submissionId'] = $SubmissionDAO->insertObject($submission);
+        $article->setOjs(array_merge(
+            $article->getOjs(),
+            ['submissionId' => $SubmissionDAO->insertObject($submission)]
+        ));
         return $submission;
     }
 
@@ -526,24 +533,25 @@ class ImportCommand extends Command
 
     private function identifyPrimaryLanguage($article)
     {
-        if (isset($article['formats']['text'])) {
-            if (count($article['formats']['text']) == 1) {
-                return array_key_first($article['formats']['text']);
+        $formats = $article->getFormats();
+        if (isset($formats['text'])) {
+            if (count($formats['text']) == 1) {
+                return array_key_first($formats['text']);
             }
         }
-        if (isset($article['formats']['pdf'])) {
-            if (count($article['formats']['pdf']) == 1) {
-                return array_key_first($article['formats']['pdf']);
+        if (isset($formats['pdf'])) {
+            if (count($formats['pdf']) == 1) {
+                return array_key_first($formats['pdf']);
             }
         }
-        if (isset($article['title'])) {
-            if (count($article['title']) == 1) {
-                return array_key_first($article['title']);
+        if ($article->getTitle()) {
+            if (count($article->getTitle()) == 1) {
+                return array_key_first($article->getTitle());
             }
         }
-        if (isset($article['keywords'])) {
-            if (count($article['keywords']) == 1) {
-                return array_key_first($article['keywords']);
+        if ($article->keywords()) {
+            if (count($article->keywords()) == 1) {
+                return array_key_first($article->keywords());
             }
         }
     }
