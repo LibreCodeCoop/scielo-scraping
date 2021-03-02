@@ -2,23 +2,15 @@
 
 namespace ScieloScrapping\Parser;
 
-use BadMethodCallException;
-use Monolog\Handler\StreamHandler;
-use Monolog\Logger;
+use ScieloScrapping\Service\ArticleService;
 use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\Response\AsyncContext;
 use Symfony\Component\HttpClient\Response\AsyncResponse;
 
-class Article
+class Article extends ArticleService
 {
-    /**
-     * Logger
-     *
-     * @var Logger
-     */
-    private $logger;
     /**
      * http browser
      *
@@ -30,22 +22,6 @@ class Article
     private $outputDir;
     private $metadataFilename;
     private $binaryDirectory;
-    private $originalFileRaw;
-    private $data = [
-        'id' => null,
-        'doi' => null,
-        'year' => null,
-        'volume' => null,
-        'issueName' => null,
-        'category' => null,
-        'updated' => null,
-        'published' => null,
-        'keywords' => [],
-        'resume' => [],
-        'title' => [],
-        'formats' => [],
-        'authors' => []
-    ];
 
     private $settings = [
         'base_directory' => 'output',
@@ -54,58 +30,22 @@ class Article
 
     public function __construct(array $settings)
     {
-        if (isset($settings['logger'])) {
-            $this->logger = $settings['logger'];
-            unset($settings['logger']);
-        } else {
-            $this->logger = new Logger('SCIELO');
-            $this->logger->pushHandler(new StreamHandler('logs/scielo.log', Logger::DEBUG));
-        }
+        $settings = parent::__construct($settings);
 
         if (isset($settings['browser'])) {
             $this->browser = $settings['browser'];
             unset($settings['browser']);
-        } else {
-            $this->browser = new HttpBrowser(HttpClient::create());
         }
 
         $this->settings = array_merge($this->settings, $settings);
     }
 
-    private function getAllData(): array
+    private function getBrowser(): HttpBrowser
     {
-        return $this->data;
-    }
-
-    public function __call(string $name, $arguments)
-    {
-        preg_match('/(?P<action>set|get)(?P<property>.*)/', $name, $matches);
-        if (!isset($matches['property']) || !isset($matches['action'])) {
-            throw new BadMethodCallException('Invalid method: ' . $name);
+        if (!$this->browser) {
+            $this->browser = new HttpBrowser(HttpClient::create());
         }
-        $property = $matches['property'];
-        $property = strtolower($property[0]) . substr($property, 1);
-        if (!array_key_exists($property, $this->data)) {
-            throw new BadMethodCallException('No such method: ' . $name);
-        }
-        if (isset($arguments[1])) {
-            if ($matches['action'] == 'set') {
-                $this->data[$property][$arguments[1]] = $arguments[0];
-                return $this;
-            }
-            return $this->data[$property][$arguments[1]];
-        }
-        if ($matches['action'] == 'set') {
-            $this->data[$property] = $arguments[0];
-            return $this;
-        }
-        if (isset($arguments[0])) {
-            if (isset($this->data[$property][$arguments[0]])) {
-                return $this->data[$property][$arguments[0]];
-            }
-            return;
-        }
-        return $this->data[$property];
+        return $this->browser;
     }
 
     public function load(string $year, string $volume, string $issueName, string $articleId, string $doi)
@@ -138,31 +78,6 @@ class Article
             return false;
         }
         return $this->loadFromFile($jsonFile);
-    }
-
-    public function loadFromFile(string $filename)
-    {
-        if (!file_exists($filename)) {
-            return false;
-        }
-        $this->originalFileRaw = file_get_contents($filename);
-        if (!$this->originalFileRaw) {
-            return false;
-        }
-        $originalFileArray = json_decode($this->originalFileRaw, true);
-        if (!$originalFileArray) {
-            $this->logger->error('Invalid metadata content', [
-                'filename' => $filename,
-                'method' => 'Article::loadFromFile'
-            ]);
-            throw new \Exception('Invalid metadata content', 1);
-        }
-        foreach ($originalFileArray as $property => $data) {
-            if (array_key_exists($property, $this->data)) {
-                $this->{'set' . strtoupper($property[0]) . substr($property, 1)}($data);
-            }
-        }
-        return $this;
     }
 
     private function save()
@@ -198,27 +113,6 @@ class Article
         }
         $this->binaryDirectory = $this->getEndOfDoi();
         return $this->binaryDirectory;
-    }
-
-    private function getEndOfDoi()
-    {
-        $doi = $this->getDoi();
-        if (!$doi) {
-            $this->logger->error('DOI is required', [
-                'data' => $this->data,
-                'method' => 'Article::getEndOfDoi'
-            ]);
-            throw new \Exception('DOI is required', 1);
-        }
-        $array = explode('/', $doi);
-        if (isset($array[1])) {
-            return $array[1];
-        }
-        $this->logger->error('DOI incomplete', [
-            'basedir' => $this->getBasedir(),
-            'method' => 'Article::getEndOfDoi'
-        ]);
-        return $array[0];
     }
 
     private function getBasedir()
@@ -349,8 +243,8 @@ class Article
         if (file_exists($rawFilename)) {
             return new Crawler(file_get_contents($rawFilename));
         }
-        $crawler = $this->browser->request('GET', $url);
-        if ($this->browser->getResponse()->getStatusCode() == 404) {
+        $crawler = $this->getBrowser()->request('GET', $url);
+        if ($this->getBrowser()->getResponse()->getStatusCode() == 404) {
             $this->logger->error('404', [
                 'method' => 'Article::getRawCrawler',
                 'article' => $this->getBasedir(),
@@ -383,8 +277,8 @@ class Article
 
     private function getBaseUrl()
     {
-        $protocol = $this->browser->getServerParameter('HTTPS') ? 'https' : 'http';
-        $host = $this->browser->getServerParameter('HTTP_HOST');
+        $protocol = $this->getBrowser()->getServerParameter('HTTPS') ? 'https' : 'http';
+        $host = $this->getBrowser()->getServerParameter('HTTP_HOST');
         return $protocol . '://' . $host;
     }
 
