@@ -77,23 +77,6 @@ class Article extends ArticleService
         return $this->loadFromFile($jsonFile);
     }
 
-    private function save()
-    {
-        $output = json_encode($this->data);
-        if ($this->originalFileRaw == $output) {
-            return;
-        }
-        $outputDir = $this->getBasedir();
-        if (!is_dir($outputDir)) {
-            mkdir($outputDir, 0666, true);
-        }
-        $filename = $this->getMetadataFilename();
-        file_put_contents(
-            $outputDir . DIRECTORY_SEPARATOR . $filename,
-            $output
-        );
-    }
-
     private function getBinaryDirectory()
     {
         if ($this->binaryDirectory) {
@@ -343,10 +326,5 @@ class Article extends ArticleService
                 }
             }
         }
-    }
-
-    public function __destruct()
-    {
-        $this->save();
     }
 }

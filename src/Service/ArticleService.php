@@ -159,6 +159,23 @@ class ArticleService
         return $this;
     }
 
+    private function save()
+    {
+        $output = json_encode($this->data);
+        if ($this->originalFileRaw == $output) {
+            return;
+        }
+        $outputDir = $this->getBasedir();
+        if (!is_dir($outputDir)) {
+            mkdir($outputDir, 0666, true);
+        }
+        $filename = $this->getMetadataFilename();
+        file_put_contents(
+            $outputDir . DIRECTORY_SEPARATOR . $filename,
+            $output
+        );
+    }
+
     private function getBasedir()
     {
         if ($this->outputDir) {
@@ -196,5 +213,10 @@ class ArticleService
         }
         $this->metadataFilename = 'metadata_' . $this->getEndOfDoi() . '.json';
         return $this->metadataFilename;
+    }
+
+    public function __destruct()
+    {
+        $this->save();
     }
 }
