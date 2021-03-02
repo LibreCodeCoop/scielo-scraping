@@ -22,7 +22,6 @@ class Article extends ArticleService
     private $binaryDirectory;
 
     private $settings = [
-        'base_directory' => 'output',
         'assets_folder' => 'assets'
     ];
 

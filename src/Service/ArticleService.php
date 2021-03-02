@@ -60,6 +60,10 @@ class ArticleService
         'ojs' => []
     ];
 
+    private $settings = [
+        'base_directory' => 'output'
+    ];
+
     public function __construct(?array $settings = [])
     {
         if (isset($settings['logger'])) {
