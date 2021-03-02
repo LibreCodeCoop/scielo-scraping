@@ -515,10 +515,8 @@ class ImportCommand extends Command
             if (!isset($options[$journalPath])) {
                 throw new RuntimeException('Invalid option: journal-path not found in OJS');
             }
-            return $this->journal = $options[$journalPath];
-        }
-
-        if (count($options) > 1) {
+            $this->journal = $options[$journalPath];
+        } elseif (count($options) > 1) {
             $helper = $this->getHelper('question');
             $question = new ChoiceQuestion(
                 'Select the destination journal',
@@ -526,9 +524,15 @@ class ImportCommand extends Command
             );
             $question->setErrorMessage('Journal path %s is invalid.');
             $journalPath = $helper->ask($this->input, $this->output, $question);
-            return $this->journal = $journals[array_keys($options)[$journalPath]];
+            $this->journal = $journals[array_keys($options)[$journalPath]];
+        } else {
+            $this->journal = current($options);
         }
-        return $this->journal = current($options);
+        $email = $this->journal->getContactEmail();
+        if (!$email) {
+            throw new RuntimeException('Configure default email of journal: settings > context > contacts');
+        }
+        return $this->journal;
     }
 
     private function identifyPrimaryLanguage($article)
