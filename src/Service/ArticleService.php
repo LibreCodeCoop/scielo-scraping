@@ -33,12 +33,16 @@ use Monolog\Logger;
  * @method array getFormats()
  * @method void setAuthors(array $authors)
  * @method array getAuthors()
+ * @method void setOjs(array $ojs)
+ * @method array getOjs()
  */
 class ArticleService
 {
     /** @var Logger */
     private $logger;
     private $originalFileRaw;
+    private $outputDir;
+    private $metadataFilename;
     private $data = [
         'id' => null,
         'doi' => null,
@@ -52,10 +56,11 @@ class ArticleService
         'resume' => [],
         'title' => [],
         'formats' => [],
-        'authors' => []
+        'authors' => [],
+        'ojs' => []
     ];
 
-    public function __construct(array $settings)
+    public function __construct(?array $settings = [])
     {
         if (isset($settings['logger'])) {
             $this->logger = $settings['logger'];
@@ -148,5 +153,44 @@ class ArticleService
             }
         }
         return $this;
+    }
+
+    private function getBasedir()
+    {
+        if ($this->outputDir) {
+            return $this->outputDir;
+        }
+        $filtered = array_filter($this->data, fn($v) => $v !== null);
+        $total = array_reduce(
+            ['year', 'volume', 'issueName', 'id'],
+            fn($c, $i) => $c += isset($filtered[$i]) ? 1 : 0
+        );
+        if ($total != 4) {
+            $this->logger->error('Required elements to generate filename not found', [
+                'data' => $this->data,
+                'method' => 'Article::getFilename'
+            ]);
+            return;
+        }
+        $this->outputDir = implode(
+            DIRECTORY_SEPARATOR,
+            [
+                $this->settings['base_directory'],
+                $this->data['year'],
+                $this->data['volume'],
+                $this->data['issueName'],
+                $this->data['id']
+            ]
+        );
+        return $this->outputDir;
+    }
+
+    private function getMetadataFilename()
+    {
+        if ($this->metadataFilename) {
+            return $this->metadataFilename;
+        }
+        $this->metadataFilename = 'metadata_' . $this->getEndOfDoi() . '.json';
+        return $this->metadataFilename;
     }
 }

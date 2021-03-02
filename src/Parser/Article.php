@@ -19,8 +19,6 @@ class Article extends ArticleService
      */
     private $browser;
     private $template;
-    private $outputDir;
-    private $metadataFilename;
     private $binaryDirectory;
 
     private $settings = [
@@ -97,15 +95,6 @@ class Article extends ArticleService
         );
     }
 
-    private function getMetadataFilename()
-    {
-        if ($this->metadataFilename) {
-            return $this->metadataFilename;
-        }
-        $this->metadataFilename = 'metadata_' . $this->getEndOfDoi() . '.json';
-        return $this->metadataFilename;
-    }
-
     private function getBinaryDirectory()
     {
         if ($this->binaryDirectory) {
@@ -113,36 +102,6 @@ class Article extends ArticleService
         }
         $this->binaryDirectory = $this->getEndOfDoi();
         return $this->binaryDirectory;
-    }
-
-    private function getBasedir()
-    {
-        if ($this->outputDir) {
-            return $this->outputDir;
-        }
-        $filtered = array_filter($this->data, fn($v) => $v !== null);
-        $total = array_reduce(
-            ['year', 'volume', 'issueName', 'id'],
-            fn($c, $i) => $c += isset($filtered[$i]) ? 1 : 0
-        );
-        if ($total != 4) {
-            $this->logger->error('Required elements to generate filename not found', [
-                'data' => $this->data,
-                'method' => 'Article::getFilename'
-            ]);
-            return;
-        }
-        $this->outputDir = implode(
-            DIRECTORY_SEPARATOR,
-            [
-                $this->settings['base_directory'],
-                $this->data['year'],
-                $this->data['volume'],
-                $this->data['issueName'],
-                $this->data['id']
-            ]
-        );
-        return $this->outputDir;
     }
 
     /**
