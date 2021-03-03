@@ -2,6 +2,7 @@
 
 namespace ScieloScrapping\Command\Ojs;
 
+use ArticleGalley;
 use Category;
 use OjsSdk\Providers\Ojs\OjsProvider;
 use Symfony\Component\Console\Command\Command;
@@ -176,8 +177,6 @@ class ImportCommand extends Command
 
     private function attachFiles(Publication $publication, Submission $submission, ArticleService $article, SplFileInfo $file)
     {
-        $genreId = $this->getDefaultGenre()->getid();
-        $submissionFileDao = DAORegistry::getDAO('SubmissionFileDAO'); /* @var $submissionFileDao SubmissionFileDAO */
         $articleGalleyDao = DAORegistry::getDAO('ArticleGalleyDAO'); /* @var $articleGalleyDao ArticleGalleyDAO */
 
         foreach ($article->getFormats() as $format => $langs) {
@@ -187,37 +186,55 @@ class ImportCommand extends Command
                 $articleGalley->setLabel(strtoupper($format));
                 $articleGalley->setLocale($lang);
                 $articleGalleyDao->insertObject($articleGalley);
-
-                $submissionFile = $submissionFileDao->newDataObjectByGenreId($genreId); /* @var $submissionFile SubmissionFile */
-                $submissionFile->setSubmissionId($submission->getId());
-                $submissionFile->setSubmissionLocale($submission->getData('locale'));
-                $submissionFile->setGenreId($genreId);
-                // $submissionFile->setFileStage(WORKFLOW_STAGE_ID_PRODUCTION);
-                $submissionFile->setFileStage(SUBMISSION_FILE_PRODUCTION_READY);
-                $submissionFile->setDateUploaded($article->getPublished());
-                $submissionFile->setDateModified($article->getUpdated());
-                $submissionFile->setAssocType(ASSOC_TYPE_SUBMISSION_FILE);
-                $submissionFile->setAssocId($articleGalley->getId());
-                switch ($format) {
-                    case 'text':
-                        $submissionFile->setFileType('text/html');
-                        $fileName = $lang . '.html';
-                        break;
-                    case 'pdf':
-                        $submissionFile->setFileType('application/pdf');
-                        $fileName = $lang . '.pdf';
-                        break;
-                }
-                $fullFilename = implode(DIRECTORY_SEPARATOR, [
-                    $article->getBasedir(),
-                    $article->getBinaryDirectory(),
-                    $fileName
-                ]);
-                $submissionFile->setName($fileName, $lang);
-                $submissionFile->setFileSize(filesize($fullFilename));
-                $submissionFileDao->insertObject($submissionFile, $fullFilename, false);
+                $this->insertSubmissionFile(
+                    $articleGalley,
+                    $submission,
+                    $article,
+                    $format,
+                    $lang
+                );
             }
         }
+    }
+
+    private function insertSubmissionFile(
+        ArticleGalley $articleGalley,
+        Submission $submission,
+        ArticleService $article,
+        string $format,
+        string $lang
+    ) {
+        $genreId = $this->getDefaultGenre()->getid();
+        $submissionFileDao = DAORegistry::getDAO('SubmissionFileDAO'); /* @var $submissionFileDao SubmissionFileDAO */
+
+        $submissionFile = $submissionFileDao->newDataObjectByGenreId($genreId); /* @var $submissionFile SubmissionFile */
+        $submissionFile->setSubmissionId($submission->getId());
+        $submissionFile->setSubmissionLocale($submission->getData('locale'));
+        $submissionFile->setGenreId($genreId);
+        // $submissionFile->setFileStage(WORKFLOW_STAGE_ID_PRODUCTION);
+        $submissionFile->setFileStage(SUBMISSION_FILE_PRODUCTION_READY);
+        $submissionFile->setDateUploaded($article->getPublished());
+        $submissionFile->setDateModified($article->getUpdated());
+        $submissionFile->setAssocType(ASSOC_TYPE_SUBMISSION_FILE);
+        $submissionFile->setAssocId($articleGalley->getId());
+        switch ($format) {
+            case 'text':
+                $submissionFile->setFileType('text/html');
+                $fileName = $lang . '.html';
+                break;
+            case 'pdf':
+                $submissionFile->setFileType('application/pdf');
+                $fileName = $lang . '.pdf';
+                break;
+        }
+        $fullFilename = implode(DIRECTORY_SEPARATOR, [
+            $article->getBasedir(),
+            $article->getBinaryDirectory(),
+            $fileName
+        ]);
+        $submissionFile->setName($fileName, $lang);
+        $submissionFile->setFileSize(filesize($fullFilename));
+        $submissionFileDao->insertObject($submissionFile, $fullFilename, false);
     }
 
     private function getDefaultGenre(): Genre
