@@ -176,12 +176,16 @@ class ImportCommand extends Command
     private function attachFiles(Publication $publication, Submission $submission, ArticleService $article, SplFileInfo $file)
     {
         $genreId = $this->getDefaultGenre()->getid();
-        $basePath = $this->getOutputDirectory() . '/' . $file->getRelativePath();
         $submissionFileDao = DAORegistry::getDAO('SubmissionFileDAO'); /* @var $submissionFileDao SubmissionFileDAO */
         $articleGalleyDao = DAORegistry::getDAO('ArticleGalleyDAO'); /* @var $articleGalleyDao ArticleGalleyDAO */
 
         foreach ($article->getFormats() as $format => $langs) {
             foreach (array_keys($langs) as $lang) {
+                $rawFilename = implode(DIRECTORY_SEPARATOR, [
+                    $article->getBasedir(),
+                    $article->getBinaryDirectory(),
+                    $lang . '.raw.html'
+                ]);
                 $articleGalley = $articleGalleyDao->newDataObject();
                 $articleGalley->setData('publicationId', $publication->getId());
                 $articleGalley->setLabel(strtoupper($format));
