@@ -177,7 +177,7 @@ class ArticleService
         );
     }
 
-    private function getBasedir()
+    public function getBasedir()
     {
         if ($this->outputDir) {
             return $this->outputDir;
@@ -216,7 +216,7 @@ class ArticleService
         return $this->metadataFilename;
     }
 
-    private function getBinaryDirectory()
+    public function getBinaryDirectory()
     {
         if ($this->binaryDirectory) {
             return $this->binaryDirectory;
