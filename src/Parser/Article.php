@@ -19,7 +19,6 @@ class Article extends ArticleService
      */
     private $browser;
     private $template;
-    private $binaryDirectory;
 
     private $settings = [
         'assets_folder' => 'assets'
@@ -75,15 +74,6 @@ class Article extends ArticleService
             return false;
         }
         return $this->loadFromFile($jsonFile);
-    }
-
-    private function getBinaryDirectory()
-    {
-        if ($this->binaryDirectory) {
-            return $this->binaryDirectory;
-        }
-        $this->binaryDirectory = $this->getEndOfDoi();
-        return $this->binaryDirectory;
     }
 
     /**

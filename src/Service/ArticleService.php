@@ -43,6 +43,7 @@ class ArticleService
     private $originalFileRaw;
     private $outputDir;
     private $metadataFilename;
+    private $binaryDirectory;
     private $data = [
         'id' => null,
         'doi' => null,
@@ -213,6 +214,15 @@ class ArticleService
         }
         $this->metadataFilename = 'metadata_' . $this->getEndOfDoi() . '.json';
         return $this->metadataFilename;
+    }
+
+    private function getBinaryDirectory()
+    {
+        if ($this->binaryDirectory) {
+            return $this->binaryDirectory;
+        }
+        $this->binaryDirectory = $this->getEndOfDoi();
+        return $this->binaryDirectory;
     }
 
     public function __destruct()
