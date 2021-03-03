@@ -181,11 +181,6 @@ class ImportCommand extends Command
 
         foreach ($article->getFormats() as $format => $langs) {
             foreach (array_keys($langs) as $lang) {
-                $rawFilename = implode(DIRECTORY_SEPARATOR, [
-                    $article->getBasedir(),
-                    $article->getBinaryDirectory(),
-                    $lang . '.raw.html'
-                ]);
                 $articleGalley = $articleGalleyDao->newDataObject();
                 $articleGalley->setData('publicationId', $publication->getId());
                 $articleGalley->setLabel(strtoupper($format));
@@ -212,7 +207,12 @@ class ImportCommand extends Command
                         $fileName = $lang . '.pdf';
                         break;
                 }
-                $submissionFile->setFileSize();
+                $fullFilename = implode(DIRECTORY_SEPARATOR, [
+                    $article->getBasedir(),
+                    $article->getBinaryDirectory(),
+                    $fileName
+                ]);
+                $submissionFile->setFileSize(filesize($fullFilename));
                 $submissionFileDao->insertObject($submissionFile, $fileName, true);
                 // _fileStageToPath
             }
