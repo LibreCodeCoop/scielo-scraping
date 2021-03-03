@@ -20,6 +20,7 @@ use ScieloScrapping\Service\ArticleService;
 use Section;
 use SplFileInfo;
 use Submission;
+use SubmissionFile;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Question\ChoiceQuestion;
@@ -212,9 +213,9 @@ class ImportCommand extends Command
                     $article->getBinaryDirectory(),
                     $fileName
                 ]);
+                $submissionFile->setName($fileName, $lang);
                 $submissionFile->setFileSize(filesize($fullFilename));
-                $submissionFileDao->insertObject($submissionFile, $fileName, true);
-                // _fileStageToPath
+                $submissionFileDao->insertObject($submissionFile, $fullFilename, false);
             }
         }
     }
@@ -350,6 +351,7 @@ class ImportCommand extends Command
         $submission->setData('dateSubmitted', str_pad($article->getPublished(), 10, '-01', STR_PAD_RIGHT));
         $submission->setData('lastModified', str_pad($article->getUpdated(), 10, '-01', STR_PAD_RIGHT));
         $submission->setData('submissionProgress', 0); // ==0 means complete
+        $submission->setData('locale', $article->getFirstLanguage());
         $article->setOjs(array_merge(
             $article->getOjs(),
             ['submissionId' => $SubmissionDAO->insertObject($submission)]
