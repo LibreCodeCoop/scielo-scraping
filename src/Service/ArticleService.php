@@ -207,6 +207,11 @@ class ArticleService
         return $this->outputDir;
     }
 
+    public function getFirstLanguage()
+    {
+        return array_key_first($this->data['title']);
+    }
+
     private function getMetadataFilename()
     {
         if ($this->metadataFilename) {
