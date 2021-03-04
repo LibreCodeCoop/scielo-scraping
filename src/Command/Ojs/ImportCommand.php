@@ -159,11 +159,16 @@ class ImportCommand extends Command
                 continue;
             }
 
-            if (!$article->getOjs()['submissionId']) {
+            if (empty($article->getOjs()['submissionId'])) {
                 $submission = $this->insertSubmission($article);
             }
 
-            if (!$article->getOjs()['publicationId']) {
+            if (empty($article->getOjs()['publicationId'])) {
+                if (!isset($submission)) {
+                    /** @var SubmissionDAO */
+                    $SubmissionDAO = DAORegistry::getDAO('SubmissionDAO');
+                    $submission = $SubmissionDAO->getById($article->getOjs()['submissionId']);
+                }
                 $publication = $this->insertPublication($file, $article, $submission);
                 $insertCategory = $this->input->getOption('insert-category');
                 if ($insertCategory) {
