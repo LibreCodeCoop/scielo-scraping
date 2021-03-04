@@ -191,12 +191,21 @@ class ImportCommand extends Command
                 $articleGalley->setLabel(strtoupper($format));
                 $articleGalley->setLocale($lang);
                 $articleGalleyDao->insertObject($articleGalley);
+
+                switch ($format) {
+                    case 'text':
+                        $fileName = $lang . '.html';
+                        break;
+                    case 'pdf':
+                        $fileName = $lang . '.pdf';
+                        break;
+                }
                 $this->insertSubmissionFile(
                     $articleGalley,
                     $submission,
                     $article,
-                    $format,
-                    $lang
+                    $lang,
+                    $fileName
                 );
             }
         }
@@ -206,40 +215,73 @@ class ImportCommand extends Command
         ArticleGalley $articleGalley,
         Submission $submission,
         ArticleService $article,
-        string $format,
-        string $lang
+        string $lang,
+        string $fileName
     ) {
         $genreId = $this->getDefaultGenre()->getid();
         $submissionFileDao = DAORegistry::getDAO('SubmissionFileDAO'); /* @var $submissionFileDao SubmissionFileDAO */
 
         $submissionFile = $submissionFileDao->newDataObjectByGenreId($genreId); /* @var $submissionFile SubmissionFile */
         $submissionFile->setSubmissionId($submission->getId());
-        $submissionFile->setSubmissionLocale($submission->getData('locale'));
+        $submissionFile->setSubmissionLocale($lang);
         $submissionFile->setGenreId($genreId);
         // $submissionFile->setFileStage(WORKFLOW_STAGE_ID_PRODUCTION);
         $submissionFile->setFileStage(SUBMISSION_FILE_PRODUCTION_READY);
         $submissionFile->setDateUploaded($article->getPublished());
         $submissionFile->setDateModified($article->getUpdated());
-        $submissionFile->setAssocType(ASSOC_TYPE_SUBMISSION_FILE);
         $submissionFile->setAssocId($articleGalley->getId());
-        switch ($format) {
-            case 'text':
-                $submissionFile->setFileType('text/html');
-                $fileName = $lang . '.html';
-                break;
-            case 'pdf':
-                $submissionFile->setFileType('application/pdf');
-                $fileName = $lang . '.pdf';
-                break;
-        }
         $fullFilename = implode(DIRECTORY_SEPARATOR, [
             $article->getBasedir(),
             $article->getBinaryDirectory(),
             $fileName
         ]);
         $submissionFile->setName($fileName, $lang);
+        $submissionFile->setFileType(mime_content_type($fullFilename));
+        $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+        switch ($extension) {
+            case 'html':
+            case 'pdf':
+                $submissionFile->setAssocType(ASSOC_TYPE_REPRESENTATION); // Primary file
+                break;
+            default:
+                $submissionFile->setAssocType(ASSOC_TYPE_SUBMISSION_FILE); // Attachment of primary file
+        }
+        $teste = $submissionFile->getName($lang);
         $submissionFile->setFileSize(filesize($fullFilename));
         $submissionFileDao->insertObject($submissionFile, $fullFilename, false);
+        if ($extension == 'html') {
+            $this->insertSubmissionAttachments(
+                $articleGalley,
+                $submission,
+                $article,
+                $lang
+            );
+        }
+    }
+
+    private function insertSubmissionAttachments(
+        ArticleGalley $articleGalley,
+        Submission $submission,
+        ArticleService $article,
+        string $lang
+    ) {
+        $finder = Finder::create()
+            ->files()
+            ->notName(['*.pdf', '*.html'])
+            ->in(
+                $article->getBasedir() .
+                DIRECTORY_SEPARATOR .
+                $article->getBinaryDirectory()
+            );
+        foreach ($finder as $file) {
+            $this->insertSubmissionFile(
+                $articleGalley,
+                $submission,
+                $article,
+                $lang,
+                $file->getFilename()
+            );
+        }
     }
 
     private function getDefaultGenre(): Genre
