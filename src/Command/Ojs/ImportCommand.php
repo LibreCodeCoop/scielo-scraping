@@ -643,9 +643,9 @@ class ImportCommand extends Command
                 return array_key_first($article->getTitle());
             }
         }
-        if ($article->keywords()) {
-            if (count($article->keywords()) == 1) {
-                return array_key_first($article->keywords());
+        if ($article->getKeywords()) {
+            if (count($article->getKeywords()) == 1) {
+                return array_key_first($article->getKeywords());
             }
         }
     }
