@@ -41,7 +41,7 @@ class ImportCommand extends Command
     /** @var \stdClass */
     private $grid;
     /** @var bool */
-    private $doSaveGrid = false;
+    private $doUpgradeGrid = false;
     /** @var Finder */
     private $metadataFinder;
     /** @var int */
@@ -647,7 +647,7 @@ class ImportCommand extends Command
 
     private function saveGrid()
     {
-        if ($this->doSaveGrid) {
+        if ($this->doUpgradeGrid) {
             file_put_contents($this->getOutputDirectory() . '/grid.json', json_encode($this->getGrid()));
         }
     }
