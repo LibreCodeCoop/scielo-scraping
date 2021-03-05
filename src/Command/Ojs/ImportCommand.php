@@ -360,6 +360,13 @@ class ImportCommand extends Command
         $PublicationDAO = DAORegistry::getDAO('PublicationDAO');
         $authorDao = DAORegistry::getDAO('AuthorDAO'); /** @var $authorDao AuthorDAO */
         foreach ($article->getAuthors() as $key => $row) {
+            if (!isset($row['name'])) {
+                $this->logger->error('Author Name', [
+                    'method' => 'Importcommand::insertAuthor',
+                    'directory' => $article->getBasedir()
+                ]);
+                continue;
+            }
             $author = $authorDao->newDataObject(); /** @var $author PKPAuthor */
             $author->setData('publicationId', $publication->getId());
             $author->setData('seq', $key);
