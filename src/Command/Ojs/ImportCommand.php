@@ -200,13 +200,15 @@ class ImportCommand extends Command
                         $fileName = $lang . '.pdf';
                         break;
                 }
-                $this->insertSubmissionFile(
+                $submissionFile = $this->insertSubmissionFile(
                     $articleGalley,
                     $submission,
                     $article,
                     $lang,
                     $fileName
                 );
+                $articleGalley->setFileId($submissionFile->getId());
+                $articleGalleyDao->updateObject($articleGalley);
             }
         }
     }
@@ -217,7 +219,7 @@ class ImportCommand extends Command
         ArticleService $article,
         string $lang,
         string $fileName
-    ) {
+    ): SubmissionFile {
         $genreId = $this->getDefaultGenre()->getid();
         $submissionFileDao = DAORegistry::getDAO('SubmissionFileDAO'); /* @var $submissionFileDao SubmissionFileDAO */
 
@@ -257,6 +259,7 @@ class ImportCommand extends Command
                 $lang
             );
         }
+        return $submissionFile;
     }
 
     private function insertSubmissionAttachments(
