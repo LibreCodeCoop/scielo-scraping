@@ -300,6 +300,10 @@ class ImportCommand extends Command
                 $this->genre =  null;
                 throw new RuntimeException('Grenre need is a supplementary');
             }
+            if (!$this->genre->getEnabled()) {
+                $this->genre =  null;
+                throw new RuntimeException('Grenre need is enabled');
+            }
         }
         return $this->genre;
     }
