@@ -249,7 +249,6 @@ class ImportCommand extends Command
             default:
                 $submissionFile->setAssocType(ASSOC_TYPE_SUBMISSION_FILE); // Attachment of primary file
         }
-        $teste = $submissionFile->getName($lang);
         $submissionFile->setFileSize(filesize($fullFilename));
         $submissionFileDao->insertObject($submissionFile, $fullFilename, false);
         if ($extension == 'html') {
