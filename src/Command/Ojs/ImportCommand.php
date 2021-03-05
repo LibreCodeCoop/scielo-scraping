@@ -79,7 +79,7 @@ class ImportCommand extends Command
         $this->loadOjsBasedir();
         OjsProvider::getApplication();
         // only for validate before start import
-        $this->getDefaultGenre();
+        $this->getDefaultSupplementaryGenre();
         $this->logger = new Logger('SCIELO');
         $this->logger->pushHandler(new StreamHandler('logs/scielo.log', Logger::DEBUG));
 
@@ -220,7 +220,7 @@ class ImportCommand extends Command
         string $lang,
         string $fileName
     ): SubmissionFile {
-        $genreId = $this->getDefaultGenre()->getid();
+        $genreId = $this->getDefaultSupplementaryGenre()->getid();
         $submissionFileDao = DAORegistry::getDAO('SubmissionFileDAO'); /* @var $submissionFileDao SubmissionFileDAO */
 
         $submissionFile = $submissionFileDao->newDataObjectByGenreId($genreId); /* @var $submissionFile SubmissionFile */
@@ -287,7 +287,7 @@ class ImportCommand extends Command
         }
     }
 
-    private function getDefaultGenre(): Genre
+    private function getDefaultSupplementaryGenre(): Genre
     {
         if (!$this->genre) {
             $genreDao = DAORegistry::getDAO('GenreDAO'); /* @var $genreDao GenreDAO */
@@ -295,6 +295,10 @@ class ImportCommand extends Command
             $this->genre = $genreDao->getByKey($defaultKey);
             if (!$this->genre) {
                 throw new RuntimeException('Invalid default genre key');
+            }
+            if (!$this->genre->getSupplementary()) {
+                $this->genre =  null;
+                throw new RuntimeException('Grenre need is a supplementary');
             }
         }
         return $this->genre;
