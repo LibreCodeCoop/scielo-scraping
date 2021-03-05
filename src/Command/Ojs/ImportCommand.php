@@ -344,8 +344,6 @@ class ImportCommand extends Command
             $publication->setData('sectionId', $section->getId());
         }
 
-        // 'disciplines', 'keywords', 'languages', 'subjects', 'supportingAgencies'
-        // categoryIds
         $article->setOjs(array_merge(
             $article->getOjs(),
             ['publicationId' => $PublicationDAO->insertObject($publication)]
