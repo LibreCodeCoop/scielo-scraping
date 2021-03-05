@@ -330,6 +330,7 @@ class ImportCommand extends Command
         $publication->setData('copyrightYear', substr($article->getPublished(), 0, 4));
         $publication->setData('datePublished', $article->getPublished());
         $publication->setData('lastModified', $article->getUpdated());
+        $publication->setData('keywords', $article->getKeywords());
         foreach ($article->getTitle() as $lang => $title) {
             $publication->setData('title', $title, $lang);
         }
@@ -367,6 +368,7 @@ class ImportCommand extends Command
          */
         $PublicationDAO = DAORegistry::getDAO('PublicationDAO');
         $authorDao = DAORegistry::getDAO('AuthorDAO'); /** @var $authorDao AuthorDAO */
+        $lang = $this->identifyPrimaryLanguage($article);
         foreach ($article->getAuthors() as $key => $row) {
             if (!isset($row['name'])) {
                 $this->logger->error('Author Name', [
@@ -378,13 +380,13 @@ class ImportCommand extends Command
             $author = $authorDao->newDataObject(); /** @var $author PKPAuthor */
             $author->setData('publicationId', $publication->getId());
             $author->setData('seq', $key);
-            $author->setData('givenName', $row['name']);
+            $author->setGivenName($row['name'], $lang);
             $author->setData('userGroupId', $this->getAuthorGroup()->getId());
             if (!empty($row['decreased'])) {
                 $author->setData('authorContribution', $row['decreased']);
             }
             if (!empty($row['foundation'])) {
-                $author->setData('affiliation', $row['foundation']);
+                $author->setAffiliation($row['foundation'], $lang);
             }
             if (!empty($row['orcid'])) {
                 $author->setData('orcid', $row['orcid']);
