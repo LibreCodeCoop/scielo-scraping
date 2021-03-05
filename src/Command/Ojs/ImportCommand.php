@@ -227,8 +227,6 @@ class ImportCommand extends Command
         $submissionFile->setSubmissionId($submission->getId());
         $submissionFile->setSubmissionLocale($lang);
         $submissionFile->setGenreId($genreId);
-        // $submissionFile->setFileStage(WORKFLOW_STAGE_ID_PRODUCTION);
-        $submissionFile->setFileStage(SUBMISSION_FILE_PRODUCTION_READY);
         $submissionFile->setDateUploaded($article->getPublished());
         $submissionFile->setDateModified($article->getUpdated());
         $submissionFile->setAssocId($articleGalley->getId());
@@ -244,9 +242,11 @@ class ImportCommand extends Command
         switch ($extension) {
             case 'html':
             case 'pdf':
+                $submissionFile->setFileStage(SUBMISSION_FILE_PROOF);
                 $submissionFile->setAssocType(ASSOC_TYPE_REPRESENTATION); // Primary file
                 break;
             default:
+                $submissionFile->setFileStage(SUBMISSION_FILE_DEPENDENT);
                 $submissionFile->setAssocType(ASSOC_TYPE_SUBMISSION_FILE); // Attachment of primary file
         }
         $submissionFile->setFileSize(filesize($fullFilename));
