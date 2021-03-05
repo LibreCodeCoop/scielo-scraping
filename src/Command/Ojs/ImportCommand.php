@@ -238,6 +238,7 @@ class ImportCommand extends Command
             $fileName
         ]);
         $submissionFile->setName($fileName, $lang);
+        $submissionFile->setOriginalFileName($fileName);
         $submissionFile->setFileType(mime_content_type($fullFilename));
         $extension = pathinfo($fileName, PATHINFO_EXTENSION);
         switch ($extension) {
