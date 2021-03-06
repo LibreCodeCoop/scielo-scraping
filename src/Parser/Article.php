@@ -204,6 +204,14 @@ class Article extends ArticleService
             }
             $this->downloadBinaryAssync($src, $filename);
         });
+        $crawler->filter('.modal-body object')->each(function ($img) use ($path) {
+            $src = $img->attr('data');
+            $filename = $path . DIRECTORY_SEPARATOR . basename($src);
+            if (file_exists($filename)) {
+                return;
+            }
+            $this->downloadBinaryAssync($src, $filename);
+        });
     }
 
     private function getBaseUrl()
