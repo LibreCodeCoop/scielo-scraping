@@ -39,7 +39,7 @@ use Monolog\Logger;
 class ArticleService
 {
     /** @var Logger */
-    private $logger;
+    protected $logger;
     private $originalFileRaw;
     private $outputDir;
     private $metadataFilename;
