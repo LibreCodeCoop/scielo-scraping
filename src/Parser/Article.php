@@ -26,7 +26,7 @@ class Article extends ArticleService
 
     public function __construct(array $settings)
     {
-        $settings = parent::__construct($settings);
+        parent::__construct($settings);
 
         if (isset($settings['browser'])) {
             $this->browser = $settings['browser'];
