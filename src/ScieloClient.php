@@ -235,7 +235,16 @@ class ScieloClient
         $crawlers['html']->filter('.articles>li')
             ->each(function (Crawler $node, $index) use ($year, $volume, $issueName, $articleId, $crawlers) {
                 $id = $this->getArticleId($node);
-                if ($articleId && $articleId != $id) {
+                if (($articleId && $articleId != $id) || !$id) {
+                    if (!$id) {
+                        $this->logger->error('Article ID is null', [
+                            'index' => $index,
+                            'year' => $year,
+                            'volume' => $volume,
+                            'issueName' => $issueName,
+                            'method' => 'getIssueFromHtml'
+                        ]);
+                    }
                     return;
                 }
                 $article = new Article([
