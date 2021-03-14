@@ -212,7 +212,7 @@ class ArticleService
         return array_key_first($this->data['title']);
     }
 
-    protected function getMetadataFilename()
+    public function getMetadataFilename()
     {
         if ($this->metadataFilename) {
             return $this->metadataFilename;
