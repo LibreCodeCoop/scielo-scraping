@@ -120,7 +120,7 @@ class ArticleService
         if (!$doi) {
             $this->logger->error('DOI is required', [
                 'data' => $this->data,
-                'method' => 'Article::getEndOfDoi'
+                'method' => 'ArticleService::getEndOfDoi'
             ]);
             throw new \Exception('DOI is required', 1);
         }
@@ -130,7 +130,7 @@ class ArticleService
         }
         $this->logger->error('DOI incomplete', [
             'basedir' => $this->getBasedir(),
-            'method' => 'Article::getEndOfDoi'
+            'method' => 'ArticleService::getEndOfDoi'
         ]);
         return $array[0];
     }
@@ -148,7 +148,7 @@ class ArticleService
         if (!$originalFileArray) {
             $this->logger->error('Invalid metadata content', [
                 'filename' => $filename,
-                'method' => 'Article::loadFromFile'
+                'method' => 'ArticleService::loadFromFile'
             ]);
             throw new \Exception('Invalid metadata content', 1);
         }
@@ -167,6 +167,13 @@ class ArticleService
             return;
         }
         $outputDir = $this->getBasedir();
+        if (!$outputDir) {
+            $this->logger->error('Invalid output dir', [
+                'data' => $this->data,
+                'method' => 'ArticleService::save'
+            ]);
+            return;
+        }
         if (!is_dir($outputDir)) {
             mkdir($outputDir, 0666, true);
         }
@@ -190,7 +197,7 @@ class ArticleService
         if ($total != 4) {
             $this->logger->error('Required elements to generate filename not found', [
                 'data' => $this->data,
-                'method' => 'Article::getFilename'
+                'method' => 'ArticleService::getFilename'
             ]);
             return;
         }
