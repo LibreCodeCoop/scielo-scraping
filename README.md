@@ -1,4 +1,4 @@
-![Test Status](https://github.com/lyseontech/scielo-scraping/workflows/ci/badge.svg?branch=main)
+![Test Status](https://github.com/librecodecoop/scielo-scraping/workflows/ci/badge.svg?branch=main)
 
 # Scielo Scraping
 
@@ -9,7 +9,7 @@ Run web scraping in a specific SciELO journal and download all publications.
 To install with composer:
 
 ```sh
-composer require lyseontech/scielo-scraping
+composer require librecodecoop/scielo-scraping
 ```
 
 ## How to use?
