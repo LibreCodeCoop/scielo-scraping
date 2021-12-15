@@ -159,6 +159,27 @@ class ImportCommand extends Command
                 continue;
             }
 
+            $finder = Finder::create()
+                ->files()
+                ->notName(['*.pdf', '*.html'])
+                ->in(
+                    $article->getBasedir() .
+                    DIRECTORY_SEPARATOR .
+                    $article->getBinaryDirectory()
+                );
+            if (!count($finder)) {
+                $this->progressBar->advance();
+                continue;
+            }
+            if (!count($article->getKeywords())) {
+                $this->progressBar->advance();
+                continue;
+            }
+            if (!empty($article->getOjs()['submissionId'])) {
+                $this->progressBar->advance();
+                continue;
+            }
+
             if (empty($article->getOjs()['submissionId'])) {
                 $submission = $this->insertSubmission($article);
             }
