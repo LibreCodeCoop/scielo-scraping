@@ -503,6 +503,7 @@ class ImportCommand extends Command
                     $category->setTitle($name, $lang);
                 }
                 $categoryDao->insertObject($category);
+                $this->category[$name] = $category;
             }
         }
         return $this->category[$name];
