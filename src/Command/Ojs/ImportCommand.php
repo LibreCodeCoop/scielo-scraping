@@ -273,8 +273,12 @@ class ImportCommand extends Command
         $submissionFile->setFileSize(filesize($fullFilename));
         $submissionFileDao->insertObject($submissionFile, $fullFilename, false);
         if ($extension == 'html') {
+            $articleGalleyDao = DAORegistry::getDAO('ArticleGalleyDAO'); /* @var $articleGalleyDao ArticleGalleyDAO */
+            $htmlArticleGalley = $articleGalleyDao->newDataObject();
+            $htmlArticleGalley->setId($submissionFile->getId());
             $this->insertSubmissionAttachments(
-                $articleGalley,
+                $submissionFile,
+                $htmlArticleGalley,
                 $submission,
                 $article,
                 $lang
@@ -284,6 +288,7 @@ class ImportCommand extends Command
     }
 
     private function insertSubmissionAttachments(
+        SubmissionFile $submissionFile,
         ArticleGalley $articleGalley,
         Submission $submission,
         ArticleService $article,
@@ -298,14 +303,27 @@ class ImportCommand extends Command
                 $article->getBinaryDirectory()
             );
         foreach ($finder as $file) {
-            $this->insertSubmissionFile(
+            $attachmentSubmissionFile = $this->insertSubmissionFile(
                 $articleGalley,
                 $submission,
                 $article,
                 $lang,
                 $file->getFilename()
             );
+            $this->replaceFileIdOnAttachment($submissionFile, $attachmentSubmissionFile);
         }
+    }
+
+    private function replaceFileIdOnAttachment($submissionFile, $attachmentSubmissionFile): void {
+        $content = file_get_contents($submissionFile->getFilePath());
+        // $fileName = pathinfo($attachmentSubmissionFile->getOriginalFileName(),  PATHINFO_FILENAME);
+        $fileName = $attachmentSubmissionFile->getOriginalFileName();
+        $content = str_replace(
+            $fileName,
+            $submissionFile->getAssocId() . '/' . $attachmentSubmissionFile->getFileId(),
+            $content
+        );
+        file_put_contents($submissionFile->getFilePath(), $content);
     }
 
     private function getDefaultSupplementaryGenre(): Genre
