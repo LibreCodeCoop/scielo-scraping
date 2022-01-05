@@ -5,6 +5,7 @@ namespace ScieloScrapping\Parser;
 use ScieloScrapping\Service\ArticleService;
 use Symfony\Component\BrowserKit\HttpBrowser;
 use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\HttpClient\Exception\TimeoutException;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\Response\AsyncContext;
 use Symfony\Component\HttpClient\Response\AsyncResponse;
@@ -174,16 +175,25 @@ class Article extends ArticleService
         if (file_exists($rawFilename)) {
             return new Crawler(file_get_contents($rawFilename));
         }
-        $crawler = $this->getBrowser()->request('GET', $url);
-        if ($this->getBrowser()->getResponse()->getStatusCode() == 404) {
-            $this->logger->error('404', [
+        try {
+            $crawler = $this->getBrowser()->request('GET', $url);
+            if ($this->getBrowser()->getResponse()->getStatusCode() == 404) {
+                $this->logger->error('404', [
+                    'method' => 'Article::getRawCrawler',
+                    'article' => $this->getBasedir(),
+                    'url' => $url
+                ]);
+                return;
+            }
+            file_put_contents($rawFilename, $crawler->outerHtml());
+        } catch (TimeoutException $th) {
+            $this->logger->error('timeout', [
                 'method' => 'Article::getRawCrawler',
                 'article' => $this->getBasedir(),
                 'url' => $url
             ]);
             return;
         }
-        file_put_contents($rawFilename, $crawler->outerHtml());
         return $crawler;
     }
 
