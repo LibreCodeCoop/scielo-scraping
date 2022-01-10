@@ -264,12 +264,21 @@ class ScieloClient
                 $article->setResume($this->getResume($node));
                 $article->setFormats($this->getTextPdfUrl($node));
                 $article->setAuthors($node->filter('a[href*="//search"]')->each(fn($a) => ['name' => $a->text()]));
-
-                $published = $crawlers['xml']->filter('entry')->eq($index)->filter('updated')->text();
-                $article->setPublished((\DateTime::createFromFormat('Y-m-d\TH:i:s\Z', $published))->format('Y-m-d H:i:s'));
+                $article->setPublished($this->getPublishedDate($crawlers['xml'], $index, $node));
                 $updated = $crawlers['xml']->filter('entry')->eq($index)->filter('updated')->text();
                 $article->setUpdated((\DateTime::createFromFormat('Y-m-d\TH:i:s\Z', $updated))->format('Y-m-d H:i:s'));
             });
+    }
+
+    private function getPublishedDate(Crawler $xml, int $index, Crawler $li): string
+    {
+        // The date from FeedRSS xml was wrong, to every articles return 2017 in case of CSP Journal.
+        $publishedXml = $xml->filter('entry')->eq($index)->filter('updated')->text();
+        $His = (\DateTime::createFromFormat('Y-m-d\TH:i:s\Z', $publishedXml))->format('H:i:s');
+
+        $published = str_pad($li->attr('data-date'), 8, '01', STR_PAD_RIGHT);
+        $Ymd = (\DateTime::createFromFormat('Ymd', $published))->format('Y-m-d');
+        return $Ymd . ' ' . $His;
     }
 
     private function getTextPdfUrl(Crawler $node)
