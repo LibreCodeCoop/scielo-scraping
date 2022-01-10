@@ -68,7 +68,9 @@ class ImportCommand extends Command
             ->addOption('output', null, InputOption::VALUE_REQUIRED, 'Output directory', 'output')
             ->addOption('default-genre', null, InputOption::VALUE_REQUIRED, 'Default genre key', 'OTHER')
             ->addOption('copy-category-to-section', null, InputOption::VALUE_NONE, 'Insert all category as section')
-            ->addOption('insert-category', null, InputOption::VALUE_NONE, 'Insert category');
+            ->addOption('insert-category', null, InputOption::VALUE_NONE, 'Insert category')
+            ->addOption('import-without-keywords', null, InputOption::VALUE_NONE, 'Import without keywords')
+            ->addOption('import-without-binaries', null, InputOption::VALUE_NONE, 'Import without binaries');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -159,21 +161,25 @@ class ImportCommand extends Command
                 continue;
             }
 
-            $finder = Finder::create()
-                ->files()
-                ->notName(['*.pdf', '*.html'])
-                ->in(
-                    $article->getBasedir() .
-                    DIRECTORY_SEPARATOR .
-                    $article->getBinaryDirectory()
-                );
-            if (!count($finder)) {
-                $this->progressBar->advance();
-                continue;
+            if (!$this->input->getOption('import-without-binaries')) {
+                $haveBinaries = Finder::create()
+                    ->files()
+                    ->name(['*.pdf', '*.html'])
+                    ->in(
+                        $article->getBasedir() .
+                        DIRECTORY_SEPARATOR .
+                        $article->getBinaryDirectory()
+                    );
+                if (!count($haveBinaries)) {
+                    $this->progressBar->advance();
+                    continue;
+                }
             }
-            if (!count($article->getKeywords())) {
-                $this->progressBar->advance();
-                continue;
+            if (!$this->input->getOption('import-without-keywords')) {
+                if (!count($article->getKeywords())) {
+                    $this->progressBar->advance();
+                    continue;
+                }
             }
             if (!empty($article->getOjs()['submissionId'])) {
                 $this->progressBar->advance();
