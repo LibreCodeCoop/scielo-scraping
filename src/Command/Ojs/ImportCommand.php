@@ -24,6 +24,7 @@ use Submission;
 use SubmissionFile;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Finder\Finder;
 use UserGroup;
@@ -63,6 +64,7 @@ class ImportCommand extends Command
     {
         $this
             ->setDescription('Import all to OJS')
+            ->addArgument('slug', InputArgument::REQUIRED, 'Slug of journal')
             ->addOption('ojs-basedir', null, InputOption::VALUE_REQUIRED, 'Base directory of OJS setup', '/app/ojs')
             ->addOption('journal-path', null, InputOption::VALUE_REQUIRED, 'Journal to import')
             ->addOption('output', null, InputOption::VALUE_REQUIRED, 'Output directory', 'output')
@@ -79,7 +81,7 @@ class ImportCommand extends Command
         $this->output = $output;
 
         $this->loadOjsBasedir();
-        OjsProvider::getApplication();
+        OjsProvider::getApplication($input->getArgument('slug'));
         // only for validate before start import
         $this->getDefaultSupplementaryGenre();
         $this->logger = new Logger('SCIELO');
