@@ -735,24 +735,56 @@ class ImportCommand extends Command
 
     private function identifyPrimaryLanguage($article)
     {
+        $primary = $this->identifyPrimaryLanguageWIthOneLang($article);
+        if ($primary) {
+            return $primary;
+        }
+        return $this->identifyPrimaryLanguageWIthManyLang($article);
+    }
+
+    private function identifyPrimaryLanguageWIthOneLang($article) {
         $formats = $article->getFormats();
         if (isset($formats['text'])) {
-            if (count($formats['text']) == 1) {
+            if (count($formats['text']) === 1) {
                 return array_key_first($formats['text']);
             }
         }
         if (isset($formats['pdf'])) {
-            if (count($formats['pdf']) == 1) {
+            if (count($formats['pdf']) === 1) {
                 return array_key_first($formats['pdf']);
             }
         }
         if ($article->getTitle()) {
-            if (count($article->getTitle()) == 1) {
+            if (count($article->getTitle()) === 1) {
                 return array_key_first($article->getTitle());
             }
         }
         if ($article->getKeywords()) {
-            if (count($article->getKeywords()) == 1) {
+            if (count($article->getKeywords()) === 1) {
+                return array_key_first($article->getKeywords());
+            }
+        }
+    }
+
+    private function identifyPrimaryLanguageWIthManyLang($article) {
+        $formats = $article->getFormats();
+        if (isset($formats['text'])) {
+            if (count($formats['text'])) {
+                return array_key_first($formats['text']);
+            }
+        }
+        if (isset($formats['pdf'])) {
+            if (count($formats['pdf'])) {
+                return array_key_first($formats['pdf']);
+            }
+        }
+        if ($article->getTitle()) {
+            if (count($article->getTitle())) {
+                return array_key_first($article->getTitle());
+            }
+        }
+        if ($article->getKeywords()) {
+            if (count($article->getKeywords())) {
                 return array_key_first($article->getKeywords());
             }
         }

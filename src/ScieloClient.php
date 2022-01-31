@@ -266,7 +266,13 @@ class ScieloClient
                 $article->setAuthors($node->filter('a[href*="//search"]')->each(fn($a) => ['name' => $a->text()]));
                 $article->setPublished($this->getPublishedDate($crawlers['xml'], $index, $node));
                 $updated = $crawlers['xml']->filter('entry')->eq($index)->filter('updated')->text();
-                $article->setUpdated((\DateTime::createFromFormat('Y-m-d\TH:i:s\Z', $updated))->format('Y-m-d H:i:s'));
+                $updated = (\DateTime::createFromFormat('Y-m-d\TH:i:s\Z', $updated));
+                // The date from FeedRSS xml was wrong, to every articles return 2017 in case of CSP Journal.
+                if ($updated->format('Y-m-d') === '2017-01-28') {
+                    $article->setUpdated($article->getPublished());
+                } else {
+                    $article->setUpdated($updated->format('Y-m-d H:i:s'));
+                }
             });
     }
 
