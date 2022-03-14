@@ -19,18 +19,21 @@ class DownloadAllCommand extends BaseCommand
         $progressBar = new ProgressBar($output, count($this->issues));
         $progressBar->start();
         $grid = $this->scieloClient->getGrid();
+        xdebug_break();
         foreach ($this->years as $year) {
-            foreach ($this->volumes as $volume) {
-                if (!isset($grid[$year][$volume])) {
-                    continue;
-                }
-                foreach ($grid[$year][$volume] as $issueName => $data) {
-                    if ($this->issues && !in_array($issueName, $this->issues)) {
+            if((int) $year < 2022){
+                foreach ($this->volumes as $volume) {
+                    if (!isset($grid[$year][$volume])) {
                         continue;
                     }
-                    $this->scieloClient->getIssue($year, $volume, $issueName, $this->articleId);
-                    $this->scieloClient->downloadAllBinaries($year, $volume, $issueName, $this->articleId);
-                    $progressBar->advance();
+                    foreach ($grid[$year][$volume] as $issueName => $data) {
+                        if ($this->issues && !in_array($issueName, $this->issues)) {
+                            continue;
+                        }
+                        $this->scieloClient->getIssue($year, $volume, $issueName, $this->articleId);
+                        $this->scieloClient->downloadAllBinaries($year, $volume, $issueName, $this->articleId);
+                        $progressBar->advance();
+                    }
                 }
             }
         }

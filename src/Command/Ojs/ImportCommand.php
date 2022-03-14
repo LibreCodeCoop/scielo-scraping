@@ -560,37 +560,40 @@ class ImportCommand extends Command
 
         $this->progressBar->setMessage('Importing issues...', 'status');
         $grid = $this->getGrid();
+        xdebug_break();
         foreach ($grid as $year => $volumes) {
-            foreach ($volumes as $volume => $issues) {
-                foreach ($issues as $issueName => $attr) {
-                    if (isset($attr['issueId'])) {
+            if($year < 2022){
+                foreach ($volumes as $volume => $issues) {
+                    foreach ($issues as $issueName => $attr) {
+                        if (isset($attr['issueId'])) {
+                            $this->progressBar->advance();
+                            continue;
+                        }
+                        $issuesFromDatabase = $this->getIssueFromDb($journal->getId(), $volume, $year, $attr['text']);
+                        if ($issuesFromDatabase->getCount()) {
+                            $issue = $issuesFromDatabase->next();
+                            $this->setGridAttribute($issue->getYear(), $issue->getvolume(), $issueName, 'issueId', $issue->getId());
+                            $this->progressBar->advance();
+                            continue;
+                        }
+                        // Insert issue
+                        $issue = $issueDAO->newDataObject();
+                        $issue->setJournalId($journal->getId());
+                        $issue->setVolume($volume);
+                        $issue->setShowVolume(1);
+                        $issue->setNumber($attr['text']);
+                        $issue->setShowNumber(1);
+                        $issue->setYear($year);
+                        $issue->setShowYear(1);
+                        foreach ($langs as $lang) {
+                            $issue->setTitle($attr['text'], $lang);
+                        }
+                        $issue->setShowTitle(1);
+                        $issue->setPublished(1);
+                        $issueId = $issueDAO->insertObject($issue);
+                        $this->setGridAttribute($year, $volume, $issueName, 'issueId', $issueId);
                         $this->progressBar->advance();
-                        continue;
                     }
-                    $issuesFromDatabase = $this->getIssueFromDb($journal->getId(), $volume, $year, $attr['text']);
-                    if ($issuesFromDatabase->getCount()) {
-                        $issue = $issuesFromDatabase->next();
-                        $this->setGridAttribute($issue->getYear(), $issue->getvolume(), $issueName, 'issueId', $issue->getId());
-                        $this->progressBar->advance();
-                        continue;
-                    }
-                    // Insert issue
-                    $issue = $issueDAO->newDataObject();
-                    $issue->setJournalId($journal->getId());
-                    $issue->setVolume($volume);
-                    $issue->setShowVolume(1);
-                    $issue->setNumber($attr['text']);
-                    $issue->setShowNumber(1);
-                    $issue->setYear($year);
-                    $issue->setShowYear(1);
-                    foreach ($langs as $lang) {
-                        $issue->setTitle($attr['text'], $lang);
-                    }
-                    $issue->setShowTitle(1);
-                    $issue->setPublished(1);
-                    $issueId = $issueDAO->insertObject($issue);
-                    $this->setGridAttribute($year, $volume, $issueName, 'issueId', $issueId);
-                    $this->progressBar->advance();
                 }
             }
         }
