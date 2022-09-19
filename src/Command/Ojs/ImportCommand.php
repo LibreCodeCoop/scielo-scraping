@@ -560,7 +560,7 @@ class ImportCommand extends Command
 
         $this->progressBar->setMessage('Importing issues...', 'status');
         $grid = $this->getGrid();
-        xdebug_break();
+
         foreach ($grid as $year => $volumes) {
             if($year < 2022){
                 foreach ($volumes as $volume => $issues) {
