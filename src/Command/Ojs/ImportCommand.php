@@ -629,7 +629,7 @@ class ImportCommand extends Command
             . ' AND i.year = ?'
             . ' AND (LOWER(i.number) LIKE ? OR LOWER(iss1.setting_value) LIKE ?)';
         $result = $issueDAO->retrieve($sql, $params);
-        return new DAOResultFactory($result, $issueDAO, '_returnIssueFromRow');
+        return new DAOResultFactory($result, $issueDAO, '_returnIssueFromRow', [], $sql, $params);
     }
 
     /**
