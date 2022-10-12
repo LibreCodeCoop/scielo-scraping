@@ -19,6 +19,7 @@ use Monolog\Logger;
 use Publication;
 use ScieloScrapping\Service\ArticleService;
 use Section;
+use Services;
 use SplFileInfo;
 use Submission;
 use SubmissionFile;
@@ -252,35 +253,34 @@ class ImportCommand extends Command
         $genreId = $this->getDefaultSupplementaryGenre()->getid();
         $submissionFileDao = DAORegistry::getDAO('SubmissionFileDAO'); /* @var $submissionFileDao SubmissionFileDAO */
 
-        $submissionFile = $submissionFileDao->newDataObjectByGenreId($genreId); /* @var $submissionFile SubmissionFile */
-        $submissionFile->setSubmissionId($submission->getId());
-        $submissionFile->setSubmissionLocale($lang);
-        $submissionFile->setGenreId($genreId);
-        $submissionFile->setDateUploaded($article->getPublished());
-        $submissionFile->setDateModified($article->getUpdated());
-        $submissionFile->setAssocId($articleGalley->getId());
+        $submissionFile = $submissionFileDao->newDataObject();
+        $submissionFile->setData('submissionId', $submission->getId());
+		$submissionFile->setData('locale', $lang);
+        $submissionFile->setData('genreId', $genreId);
+		$submissionFile->setData('createdAt', $article->getPublished());
+        $submissionFile->setData('updatedAt', $article->getUpdated());
+        $submissionFile->setData('assocId', $articleGalley->getId());
         $fullFilename = implode(DIRECTORY_SEPARATOR, [
             $article->getBasedir(),
             $article->getBinaryDirectory(),
             $fileName
         ]);
-        $submissionFile->setName($fileName, $lang);
-        $submissionFile->setOriginalFileName($fileName);
-        $submissionFile->setFileType(mime_content_type($fullFilename));
-        $extension = pathinfo($fileName, PATHINFO_EXTENSION);
-        switch ($extension) {
+        $fileData = $this->insertFile($submission, $fullFilename);
+        $submissionFile->setData('fileId', $fileData['fileId']);
+        $submissionFile->setData('name', $fileName, $lang);
+        switch ($fileData['extension']) {
             case 'html':
             case 'pdf':
-                $submissionFile->setFileStage(SUBMISSION_FILE_PROOF);
-                $submissionFile->setAssocType(ASSOC_TYPE_REPRESENTATION); // Primary file
+                $submissionFile->setData('fileStage', SUBMISSION_FILE_PROOF);
+                $submissionFile->setData('assocType', ASSOC_TYPE_REPRESENTATION);
+
                 break;
             default:
-                $submissionFile->setFileStage(SUBMISSION_FILE_DEPENDENT);
-                $submissionFile->setAssocType(ASSOC_TYPE_SUBMISSION_FILE); // Attachment of primary file
+                $submissionFile->setData('fileStage', SUBMISSION_FILE_DEPENDENT);
+                $submissionFile->setData('assocType', ASSOC_TYPE_SUBMISSION_FILE);
         }
-        $submissionFile->setFileSize(filesize($fullFilename));
-        $submissionFileDao->insertObject($submissionFile, $fullFilename, false);
-        if ($extension == 'html') {
+        $submissionFileDao->insertObject($submissionFile);
+        if ($fileData['extension'] == 'html') {
             $articleGalleyDao = DAORegistry::getDAO('ArticleGalleyDAO'); /* @var $articleGalleyDao ArticleGalleyDAO */
             $htmlArticleGalley = $articleGalleyDao->newDataObject();
             $htmlArticleGalley->setId($submissionFile->getId());
@@ -291,8 +291,26 @@ class ImportCommand extends Command
                 $article,
                 $lang
             );
+            $this->replaceFileIdOnAttachment($submissionFile, $fileData['filePath'], $fileName, $fileData['fileId']);
         }
         return $submissionFile;
+    }
+
+    private function insertFile(Submission $submission, string $fileName):array{
+        $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+        $journal = $this->getJournal();
+        import('classes.core.Services');
+		$submissionDir = Services::get('submissionFile')->getSubmissionDir($journal->getId(), $submission->getId());
+        $filePath = $submissionDir . '/' . uniqid() . '.' . $extension;
+		$fileId = Services::get('file')->add(
+			$fileName,
+			$filePath
+		);
+        return [
+            'fileId' => $fileId,
+            'extension' => $extension,
+            'filePath' => $filePath,
+        ];
     }
 
     private function insertSubmissionAttachments(
@@ -318,20 +336,17 @@ class ImportCommand extends Command
                 $lang,
                 $file->getFilename()
             );
-            $this->replaceFileIdOnAttachment($submissionFile, $attachmentSubmissionFile);
         }
     }
 
-    private function replaceFileIdOnAttachment($submissionFile, $attachmentSubmissionFile): void {
-        $content = file_get_contents($submissionFile->getFilePath());
-        // $fileName = pathinfo($attachmentSubmissionFile->getOriginalFileName(),  PATHINFO_FILENAME);
-        $fileName = $attachmentSubmissionFile->getOriginalFileName();
+    private function replaceFileIdOnAttachment($submissionFile, string $filePath, string $fileName, int $fileId): void {
+        $content = file_get_contents($filePath);
         $content = str_replace(
             $fileName,
-            $submissionFile->getAssocId() . '/' . $attachmentSubmissionFile->getFileId(),
+            $submissionFile->getData('assocId') . '/' . $fileId,
             $content
         );
-        file_put_contents($submissionFile->getFilePath(), $content);
+        file_put_contents($filePath, $content);
     }
 
     private function getDefaultSupplementaryGenre(): Genre
@@ -562,7 +577,7 @@ class ImportCommand extends Command
         $grid = $this->getGrid();
 
         foreach ($grid as $year => $volumes) {
-            if($year < 2022){
+        //    if($year < 2022){
                 foreach ($volumes as $volume => $issues) {
                     foreach ($issues as $issueName => $attr) {
                         if (isset($attr['issueId'])) {
@@ -595,7 +610,7 @@ class ImportCommand extends Command
                         $this->progressBar->advance();
                     }
                 }
-            }
+        //    }
         }
         $this->saveGrid();
     }
