@@ -29,6 +29,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Finder\Finder;
 use UserGroup;
+use Application;
 
 class ImportCommand extends Command
 {
@@ -206,6 +207,16 @@ class ImportCommand extends Command
                 }
                 $this->attachFiles($publication, $submission, $article, $file);
             }
+
+            // Index article.
+            /** @var SubmissionDAO */
+            $SubmissionDAO = DAORegistry::getDAO('SubmissionDAO');
+            $submission = $SubmissionDAO->getById($submission->getData('id'));
+            $articleSearchIndex = Application::getSubmissionSearchIndex();
+            $articleSearchIndex->submissionMetadataChanged($submission);
+            $articleSearchIndex->submissionFilesChanged($submission);
+            $articleSearchIndex->submissionChangesFinished();
+
             $this->progressBar->advance();
         }
     }
