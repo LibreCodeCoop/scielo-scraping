@@ -121,6 +121,7 @@ class ScieloClient
             mkdir($this->settings['base_directory'], 0666);
         }
         file_put_contents($this->settings['base_directory'] . DIRECTORY_SEPARATOR . 'grid.json', json_encode($grid));
+        sort($grid);
         $this->grid = $grid;
         return $grid;
     }
