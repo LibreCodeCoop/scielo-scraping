@@ -206,13 +206,26 @@ class Article extends ArticleService
         if (!is_dir($path)) {
             mkdir($path);
         }
-        $crawler->filter('.modal-body img')->each(function ($img) use ($path) {
+        $crawler->filter('img')->each(function ($img) use ($path) {
             $src = $img->attr('src');
-            $filename = $path . DIRECTORY_SEPARATOR . basename($src);
-            if (file_exists($filename)) {
-                return;
+
+            if (str_starts_with($src, "/media/assets/csp/")){
+                $filename = $path . DIRECTORY_SEPARATOR . basename($src);
+                if (file_exists($filename)) {
+                    return;
+                }
+                $this->downloadBinaryAssync($src, $filename);
             }
-            $this->downloadBinaryAssync($src, $filename);
+        });
+        $crawler->filter('a')->each(function ($img) use ($path) {
+            $src = $img->attr('href');
+            if (str_starts_with($src, "/media/assets/csp/")){
+                $filename = $path . DIRECTORY_SEPARATOR . basename($src);
+                if (file_exists($filename)) {
+                    return;
+                }
+                $this->downloadBinaryAssync($src, $filename);
+            }
         });
         $crawler->filter('.modal-body object')->each(function ($img) use ($path) {
             $src = $img->attr('data');
@@ -289,7 +302,7 @@ class Article extends ArticleService
                 ]);
             }
         }
-        $html = str_replace('{{body}}', $this->formatHtml($html), $this->getTemplate());
+        $html = str_replace('{{body}}', $html, $this->getTemplate());
         file_put_contents($bodyFilename, $html);
     }
 
