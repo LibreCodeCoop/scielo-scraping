@@ -120,8 +120,8 @@ class ScieloClient
         if (!is_dir($this->settings['base_directory'])) {
             mkdir($this->settings['base_directory'], 0666);
         }
+        ksort($grid);
         file_put_contents($this->settings['base_directory'] . DIRECTORY_SEPARATOR . 'grid.json', json_encode($grid));
-        sort($grid);
         $this->grid = $grid;
         return $grid;
     }
