@@ -96,17 +96,39 @@ class Article extends ArticleService
                 ]);
             }
         }
+        $nodes = $crawler->filter('meta[name="citation_title"]');
+        if ($nodes->count()) {
+            $this->setTitle($nodes->attr('content'), $currentLang);
+            $titlesExtra = $crawler->filter('h2[class="article-title"]')->each(function ($node, $i) {return $node->text();});
 
-        if (!$this->getTitle($currentLang)) {
-            $nodes = $crawler->filter('meta[name="citation_title"]');
-            if ($nodes->count()) {
-                $this->setTitle($nodes->attr('content'), $currentLang);
-            } else {
-                $this->logger->error('Without Title', [
-                    'method' => 'ScieloClient::getArticleMetadata',
-                    'directory' => $this->getBasedir()
-                ]);
+            if($currentLang == "pt_BR"){
+                $langs = ["en_US", "es_ES"];
             }
+            if($currentLang == "en_US"){
+                if(count($titlesExtra) > 1){
+                    $langs = ["pt_BR", "es_ES"];
+                }else{
+                    $langs = ["pt_BR"];
+                }
+            }
+            if($currentLang == "es_ES"){
+                if(count($titlesExtra) > 1){
+                    $langs = ["en_US", "pt_BR"];
+                }else{
+                    $langs = ["pt_BR"];
+                }
+            }
+            if($titlesExtra){
+                foreach($titlesExtra as $key => $value){
+                    $this->setTitle($value, $langs[$key]);
+                    next($langs);
+                }
+            }
+        } else {
+            $this->logger->error('Without Title', [
+                'method' => 'ScieloClient::getArticleMetadata',
+                'directory' => $this->getBasedir()
+            ]);
         }
         if (!$this->getPublished()) {
             $nodes = $crawler->filter('meta[name="citation_publication_date"]');
